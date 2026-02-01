@@ -1,0 +1,76 @@
+@page "/dashboard/{applicationId}/realtime"
+@model TGHarker.Insights.Web.Pages.Dashboard.Application.RealtimeModel
+@{
+    ViewData["Title"] = "Real-time";
+    Layout = "_DashboardLayout";
+}
+
+<div class="page-header">
+    <h4>Real-time</h4>
+    <p class="page-description">See who's on your website right now. Data updates automatically every 5 seconds.</p>
+</div>
+
+<div class="info-callout">
+    <div class="info-callout-title"><i class="bi bi-broadcast me-2"></i>Live Tracking</div>
+    <p class="info-callout-text">This page shows visitors who have been active in the last 5 minutes. Use this to monitor traffic spikes, campaign launches, or real-time user behavior.</p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="metric-card text-center">
+            <div class="metric-label">Active Visitors</div>
+            <div class="metric-value text-primary" id="activeVisitors">@Model.Snapshot.ActiveVisitors</div>
+            <div class="metric-card-help">Currently browsing your site</div>
+        </div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <h6 class="mb-3">Active Pages</h6>
+    <p class="text-muted small mb-3">Pages currently being viewed by active visitors</p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Page</th>
+                <th class="text-end">Active Visitors</th>
+            </tr>
+        </thead>
+        <tbody id="activePages">
+            @foreach (var page in Model.Snapshot.VisitorsByPage.OrderByDescending(p => p.Value))
+            {
+                <tr>
+                    <td>@(page.Key)</td>
+                    <td class="text-end">@(page.Value)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+<script>
+    // Poll for real-time updates every 5 seconds
+    setInterval(async () => {
+        try {
+            const response = await fetch('/api/properties/@Model.ApplicationId/analytics/realtime');
+            const data = await response.json();
+
+            document.getElementById('activeVisitors').textContent = data.activeVisitors;
+
+            const tbody = document.getElementById('activePages');
+            tbody.innerHTML = '';
+
+            const sortedPages = Object.entries(data.visitorsByPage)
+                .sort((a, b) => b[1] - a[1]);
+
+            for (const [page, count] of sortedPages) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${page}</td><td class="text-end">${count}</td>`;
+                tbody.appendChild(row);
+            }
+        } catch (e) {
+            console.error('Failed to fetch real-time data:', e);
+        }
+    }, 5000);
+</script>
+}

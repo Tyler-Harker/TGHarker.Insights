@@ -1,0 +1,101 @@
+@using TGHarker.Insights.Web.Pages.Dashboard
+@inject TGHarker.Insights.Web.Services.ThemeService ThemeService
+@{
+    var model = ViewContext.ViewData.Model as DashboardPageModel;
+}
+<!DOCTYPE html>
+<html lang="en" data-theme="@ThemeService.GetTheme()">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Insights</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <link href="/css/themes.css" rel="stylesheet" />
+    <style>
+        :root {
+            --sidebar-width: 240px;
+        }
+        .sidebar {
+            width: var(--sidebar-width);
+            min-height: calc(100vh - 56px);
+            position: fixed;
+            left: 0;
+            top: 56px;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+        }
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+        .page-header h4 {
+            margin-bottom: 0.25rem;
+        }
+    </style>
+    @RenderSection("Styles", required: false)
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">Insights</a>
+
+            @if (model != null)
+            {
+                <partial name="_ApplicationSwitcher" model="model" />
+            }
+
+            <div class="d-flex align-items-center ms-auto gap-3">
+                <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <i class="bi bi-moon-fill" id="theme-icon-dark" style="display: @(ThemeService.IsDarkMode ? "inline" : "none")"></i>
+                    <i class="bi bi-sun-fill" id="theme-icon-light" style="display: @(ThemeService.IsDarkMode ? "none" : "inline")"></i>
+                </button>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <span class="text-white">@User.Identity.Name</span>
+                    <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+                }
+                else
+                {
+                    <a href="/login" class="btn btn-light btn-sm">Login</a>
+                }
+            </div>
+        </div>
+    </nav>
+
+    <div class="sidebar">
+        @if (model != null)
+        {
+            <partial name="_DashboardSidebar" model="model" />
+        }
+    </div>
+
+    <div class="main-content">
+        @RenderBody()
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+            // Update DOM immediately for instant feedback
+            html.setAttribute('data-theme', newTheme);
+
+            // Update icons
+            document.getElementById('theme-icon-dark').style.display = newTheme === 'dark' ? 'inline' : 'none';
+            document.getElementById('theme-icon-light').style.display = newTheme === 'light' ? 'inline' : 'none';
+
+            // Persist to server
+            fetch('/api/theme?theme=' + newTheme, { method: 'POST' })
+                .catch(err => console.error('Failed to save theme:', err));
+        }
+    </script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

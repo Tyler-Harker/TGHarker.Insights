@@ -1,0 +1,230 @@
+@page "/dashboard/{applicationId}"
+@model TGHarker.Insights.Web.Pages.Dashboard.Application.OverviewModel
+@{
+    ViewData["Title"] = $"Dashboard - {Model.Application?.Name}";
+    Layout = "_DashboardLayout";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header">
+        <h4>Overview</h4>
+        <p class="page-description">A high-level summary of your website's performance and visitor activity.</p>
+    </div>
+    <div class="d-flex gap-2">
+        @if (Model.FilterableAttributes.Any())
+        {
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                    <i class="bi bi-funnel me-1"></i>
+                    @if (!string.IsNullOrEmpty(Model.FilterAttribute) && !string.IsNullOrEmpty(Model.FilterValue))
+                    {
+                        <span>@Model.FilterAttribute: @Model.FilterValue</span>
+                    }
+                    else
+                    {
+                        <span>Filter by Attribute</span>
+                    }
+                </button>
+                <div class="dropdown-menu p-3 shadow" style="min-width: 280px;">
+                    <form method="get">
+                        <input type="hidden" name="range" value="@Model.Range" />
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium">Attribute</label>
+                            <select class="form-select form-select-sm" name="filterAttribute" id="filterAttributeSelect">
+                                <option value="">Select attribute...</option>
+                                @foreach (var attr in Model.FilterableAttributes)
+                                {
+                                    <option value="@attr.Key" selected="@(Model.FilterAttribute == attr.Key)">@attr.Key</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium">Value</label>
+                            <select class="form-select form-select-sm" name="filterValue" id="filterValueSelect" disabled="@(string.IsNullOrEmpty(Model.FilterAttribute))">
+                                <option value="">Select value...</option>
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Apply</button>
+                            <a href="/dashboard/@Model.ApplicationId?range=@Model.Range" class="btn btn-outline-secondary btn-sm">Clear</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+        <div class="btn-group">
+            @{
+                var baseUrl = $"/dashboard/{Model.ApplicationId}";
+                var filterParams = "";
+                if (!string.IsNullOrEmpty(Model.FilterAttribute) && !string.IsNullOrEmpty(Model.FilterValue))
+                {
+                    filterParams = $"&filterAttribute={Model.FilterAttribute}&filterValue={Model.FilterValue}";
+                }
+            }
+            <a href="@(baseUrl)?range=30d@(filterParams)" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
+            <a href="@(baseUrl)?range=7d@(filterParams)" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
+            <a href="@(baseUrl)?range=today@(filterParams)" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.FilterAttribute) && !string.IsNullOrEmpty(Model.FilterValue))
+{
+    <div class="alert alert-info py-2 d-flex align-items-center justify-content-between mb-4">
+        <span>
+            <i class="bi bi-funnel-fill me-2"></i>
+            Showing data for visitors where <strong>@Model.FilterAttribute</strong> = <strong>@Model.FilterValue</strong>
+        </span>
+        <a href="/dashboard/@Model.ApplicationId?range=@Model.Range" class="btn btn-sm btn-outline-info">Clear Filter</a>
+    </div>
+}
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-label">Page Views</div>
+            <div class="metric-value">@Model.Metrics.PageViews.ToString("N0")</div>
+            <div class="metric-card-help">Total pages loaded by visitors</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-label">Sessions</div>
+            <div class="metric-value">@Model.Metrics.Sessions.ToString("N0")</div>
+            <div class="metric-card-help">Individual visitor sessions</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-label">Bounce Rate</div>
+            <div class="metric-value">@Model.Metrics.BounceRate.ToString("F1")%</div>
+            <div class="metric-card-help">Single-page visits without interaction</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-label">Avg. Duration</div>
+            <div class="metric-value">@TimeSpan.FromSeconds(Model.Metrics.AvgSessionDuration).ToString(@"m\:ss")</div>
+            <div class="metric-card-help">Average time spent per session</div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="chart-container">
+            <h6 class="mb-3">Traffic Overview</h6>
+            <canvas id="trafficChart" height="100"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h6 class="mb-3">Top Pages</h6>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Page</th>
+                        <th class="text-end">Views</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var page in Model.TopPages.Take(5))
+                    {
+                        <tr>
+                            <td class="text-truncate" style="max-width: 200px;">@(page.Path)</td>
+                            <td class="text-end">@(page.Views.ToString("N0"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h6 class="mb-3">Traffic Sources</h6>
+            <canvas id="sourcesChart" height="150"></canvas>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Attribute filter logic
+    const attributeValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AttributeValues));
+    const currentFilterAttribute = '@(Model.FilterAttribute ?? "")';
+    const currentFilterValue = '@(Model.FilterValue ?? "")';
+
+    const attrSelect = document.getElementById('filterAttributeSelect');
+    const valueSelect = document.getElementById('filterValueSelect');
+
+    function updateValueDropdown() {
+        const selectedAttr = attrSelect?.value;
+        if (!valueSelect) return;
+
+        valueSelect.innerHTML = '<option value="">Select value...</option>';
+        valueSelect.disabled = !selectedAttr;
+
+        if (selectedAttr && attributeValues[selectedAttr]) {
+            attributeValues[selectedAttr].forEach(val => {
+                const option = document.createElement('option');
+                option.value = val;
+                option.textContent = val;
+                if (val === currentFilterValue && selectedAttr === currentFilterAttribute) {
+                    option.selected = true;
+                }
+                valueSelect.appendChild(option);
+            });
+        }
+    }
+
+    if (attrSelect) {
+        attrSelect.addEventListener('change', updateValueDropdown);
+        // Initialize on page load if there's a current filter
+        if (currentFilterAttribute) {
+            updateValueDropdown();
+        }
+    }
+
+    // Traffic chart
+    new Chart(document.getElementById('trafficChart'), {
+        type: 'line',
+        data: {
+            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels)),
+            datasets: [{
+                label: 'Page Views',
+                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartData)),
+                borderColor: '#38bdf8',
+                backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Sources chart
+    new Chart(document.getElementById('sourcesChart'), {
+        type: 'doughnut',
+        data: {
+            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SourceLabels)),
+            datasets: [{
+                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SourceData)),
+                backgroundColor: ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1', '#075985', '#0c4a6e']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'right' } }
+        }
+    });
+</script>
+}

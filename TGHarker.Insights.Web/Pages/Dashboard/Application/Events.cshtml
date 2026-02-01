@@ -1,0 +1,83 @@
+@page "/dashboard/{applicationId}/events"
+@model TGHarker.Insights.Web.Pages.Dashboard.Application.EventsModel
+@{
+    ViewData["Title"] = "Events";
+    Layout = "_DashboardLayout";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header">
+        <h4>Custom Events</h4>
+        <p class="page-description">Track specific user interactions like button clicks, form submissions, and other custom actions.</p>
+    </div>
+    <div class="btn-group">
+        <a href="/dashboard/@Model.ApplicationId/events?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
+        <a href="/dashboard/@Model.ApplicationId/events?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
+        <a href="/dashboard/@Model.ApplicationId/events?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+    </div>
+</div>
+
+<div class="info-callout">
+    <div class="info-callout-title"><i class="bi bi-code-slash me-2"></i>How to Track Events</div>
+    <p class="info-callout-text">
+        Add custom event tracking to your website using: <code>insights.track('category', 'action')</code><br>
+        Example: <code>insights.track('button', 'signup_click')</code> or <code>insights.track('form', 'newsletter_submit')</code>
+    </p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="metric-label">Total Events</div>
+            <div class="metric-value">@Model.TotalEvents.ToString("N0")</div>
+            <div class="metric-card-help">All tracked events in period</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="metric-label">Unique Events</div>
+            <div class="metric-value">@Model.UniqueEventNames</div>
+            <div class="metric-card-help">Different event types tracked</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="metric-label">Events per Session</div>
+            <div class="metric-value">@Model.EventsPerSession.ToString("F1")</div>
+            <div class="metric-card-help">Average engagement level</div>
+        </div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <h6 class="mb-3">Event Breakdown</h6>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Event Name</th>
+                <th class="text-end">Count</th>
+                <th class="text-end">Unique Users</th>
+                <th class="text-end">% of Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var evt in Model.EventStats)
+            {
+                <tr>
+                    <td><code>@evt.Name</code></td>
+                    <td class="text-end">@evt.Count.ToString("N0")</td>
+                    <td class="text-end">@evt.UniqueUsers.ToString("N0")</td>
+                    <td class="text-end">@evt.Percentage.ToString("F1")%</td>
+                </tr>
+            }
+            @if (!Model.EventStats.Any())
+            {
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        No events tracked yet. Use <code>insights.track('event_name')</code> to track custom events.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,120 @@
+@page "/dashboard/{applicationId}/sources"
+@model TGHarker.Insights.Web.Pages.Dashboard.Application.SourcesModel
+@{
+    ViewData["Title"] = "Sources";
+    Layout = "_DashboardLayout";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header">
+        <h4>Traffic Sources</h4>
+        <p class="page-description">Understand where your visitors are coming from and which channels drive the most traffic.</p>
+    </div>
+    <div class="btn-group">
+        <a href="/dashboard/@Model.ApplicationId/sources?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
+        <a href="/dashboard/@Model.ApplicationId/sources?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
+        <a href="/dashboard/@Model.ApplicationId/sources?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+    </div>
+</div>
+
+<div class="info-callout">
+    <div class="info-callout-title"><i class="bi bi-diagram-3 me-2"></i>Traffic Source Types</div>
+    <p class="info-callout-text">
+        <strong>Direct</strong> - Visitors who typed your URL directly or used bookmarks.
+        <strong>Organic</strong> - Traffic from search engines.
+        <strong>Referral</strong> - Visitors from links on other websites.
+        <strong>Social</strong> - Traffic from social media platforms.
+    </p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h6 class="mb-3">Sources Overview</h6>
+            <canvas id="sourcesChart" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h6 class="mb-3">Source Breakdown</h6>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th class="text-end">Sessions</th>
+                        <th class="text-end">%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var source in Model.SourceStats)
+                    {
+                        <tr>
+                            <td>@source.Source</td>
+                            <td class="text-end">@source.Sessions.ToString("N0")</td>
+                            <td class="text-end">@source.Percentage.ToString("F1")%</td>
+                        </tr>
+                    }
+                    @if (!Model.SourceStats.Any())
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">No source data available yet</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <h6 class="mb-3">Top Referrers</h6>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Referrer</th>
+                <th class="text-end">Sessions</th>
+                <th class="text-end">Bounce Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var referrer in Model.ReferrerStats)
+            {
+                <tr>
+                    <td class="text-truncate" style="max-width: 400px;">@referrer.Referrer</td>
+                    <td class="text-end">@referrer.Sessions.ToString("N0")</td>
+                    <td class="text-end">@referrer.BounceRate.ToString("F1")%</td>
+                </tr>
+            }
+            @if (!Model.ReferrerStats.Any())
+            {
+                <tr>
+                    <td colspan="3" class="text-center text-muted py-4">No referrer data available yet</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+<script>
+    @if (Model.SourceStats.Any())
+    {
+        <text>
+        new Chart(document.getElementById('sourcesChart'), {
+            type: 'doughnut',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SourceStats.Select(s => s.Source))),
+                datasets: [{
+                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SourceStats.Select(s => s.Sessions))),
+                    backgroundColor: ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1', '#075985', '#0c4a6e']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+        </text>
+    }
+</script>
+}

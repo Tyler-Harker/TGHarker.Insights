@@ -1,0 +1,62 @@
+@page "/dashboard/{applicationId}/pages"
+@model TGHarker.Insights.Web.Pages.Dashboard.Application.PagesModel
+@{
+    ViewData["Title"] = "Pages";
+    Layout = "_DashboardLayout";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header">
+        <h4>Pages</h4>
+        <p class="page-description">Analyze which pages on your website receive the most traffic and engagement.</p>
+    </div>
+    <div class="btn-group">
+        <a href="/dashboard/@Model.ApplicationId/pages?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
+        <a href="/dashboard/@Model.ApplicationId/pages?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
+        <a href="/dashboard/@Model.ApplicationId/pages?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+    </div>
+</div>
+
+<div class="info-callout">
+    <div class="info-callout-title"><i class="bi bi-file-earmark-text me-2"></i>Understanding Page Metrics</div>
+    <p class="info-callout-text">
+        <strong>Views</strong> - Total page loads. <strong>Unique Visitors</strong> - Distinct users who viewed the page.
+        <strong>Avg. Time</strong> - How long visitors stay on the page. <strong>Bounce Rate</strong> - Visitors who left without further interaction.
+    </p>
+</div>
+
+<div class="chart-container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0">Page Performance</h6>
+        <span class="text-muted small">Sorted by total views</span>
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Page</th>
+                <th class="text-end">Views</th>
+                <th class="text-end">Unique Visitors</th>
+                <th class="text-end">Avg. Time</th>
+                <th class="text-end">Bounce Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var stat in Model.PageStats)
+            {
+                <tr>
+                    <td class="text-truncate" style="max-width: 300px;">@stat.Path</td>
+                    <td class="text-end">@stat.Views.ToString("N0")</td>
+                    <td class="text-end">@stat.UniqueVisitors.ToString("N0")</td>
+                    <td class="text-end">@TimeSpan.FromSeconds(stat.AvgTimeOnPage).ToString(@"m\:ss")</td>
+                    <td class="text-end">@stat.BounceRate.ToString("F1")%</td>
+                </tr>
+            }
+            @if (!Model.PageStats.Any())
+            {
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">No page data available yet</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

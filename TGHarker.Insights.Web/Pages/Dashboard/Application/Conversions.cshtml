@@ -1,0 +1,144 @@
+@page "/dashboard/{applicationId}/conversions"
+@model TGHarker.Insights.Web.Pages.Dashboard.Application.ConversionsModel
+@{
+    ViewData["Title"] = "Conversions";
+    Layout = "_DashboardLayout";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header">
+        <h4>Conversions</h4>
+        <p class="page-description">Track important user actions and measure how effectively your site achieves its objectives.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <div class="btn-group">
+            <a href="/dashboard/@Model.ApplicationId/conversions?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
+            <a href="/dashboard/@Model.ApplicationId/conversions?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
+            <a href="/dashboard/@Model.ApplicationId/conversions?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+        </div>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newGoalModal">
+            <i class="bi bi-plus-lg me-1"></i> New Goal
+        </button>
+    </div>
+</div>
+
+<div class="info-callout">
+    <div class="info-callout-title"><i class="bi bi-bullseye me-2"></i>What are Goals?</div>
+    <p class="info-callout-text">
+        Goals help you measure important user actions. Create a <strong>Page Visit</strong> goal to track when users reach a specific page (like a thank-you page),
+        or an <strong>Event</strong> goal to track custom interactions (like form submissions or purchases).
+    </p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="metric-label">Total Conversions</div>
+            <div class="metric-value">@Model.TotalConversions.ToString("N0")</div>
+            <div class="metric-card-help">Completed goals in period</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="metric-label">Conversion Rate</div>
+            <div class="metric-value">@Model.OverallConversionRate.ToString("F1")%</div>
+            <div class="metric-card-help">Sessions resulting in a conversion</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="metric-label">Active Goals</div>
+            <div class="metric-value">@Model.Goals.Count</div>
+            <div class="metric-card-help">Goals being tracked</div>
+        </div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <h6 class="mb-3">Goals</h6>
+    <p class="text-muted small mb-3">Track performance of each goal over the selected time period</p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Goal</th>
+                <th>Type</th>
+                <th class="text-end">Conversions</th>
+                <th class="text-end">Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var goal in Model.Goals)
+            {
+                <tr>
+                    <td>@goal.Name</td>
+                    <td><span class="badge bg-secondary">@goal.Type</span></td>
+                    <td class="text-end">@goal.Conversions.ToString("N0")</td>
+                    <td class="text-end">@goal.ConversionRate.ToString("F1")%</td>
+                </tr>
+            }
+            @if (!Model.Goals.Any())
+            {
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        No goals configured yet. Create a goal to start tracking conversions.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- New Goal Modal -->
+<div class="modal fade" id="newGoalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Goal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="CreateGoal">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Goal Name</label>
+                        <input type="text" class="form-control" name="goalName" required placeholder="e.g., Sign Up, Purchase">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Goal Type</label>
+                        <select class="form-select" name="goalType" id="goalType">
+                            <option value="PageView">Page Visit</option>
+                            <option value="Event">Event Trigger</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="pagePathField">
+                        <label class="form-label">Page Path</label>
+                        <input type="text" class="form-control" name="pagePath" placeholder="/thank-you">
+                    </div>
+                    <div class="mb-3 d-none" id="eventNameField">
+                        <label class="form-label">Event Name</label>
+                        <input type="text" class="form-control" name="eventName" placeholder="purchase_complete">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Goal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('goalType').addEventListener('change', function() {
+        const pageField = document.getElementById('pagePathField');
+        const eventField = document.getElementById('eventNameField');
+        if (this.value === 'Event') {
+            pageField.classList.add('d-none');
+            eventField.classList.remove('d-none');
+        } else {
+            pageField.classList.remove('d-none');
+            eventField.classList.add('d-none');
+        }
+    });
+</script>
+}

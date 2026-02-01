@@ -1,0 +1,266 @@
+# Azure DevOps Pipeline for TGHarker.Insights
+# Builds Docker images and deploys to Azure Container Apps
+#
+# Required Pipeline Variables (configure in Azure DevOps):
+#   ACR_NAME                  - Azure Container Registry name
+#   ACR_LOGIN_SERVER          - ACR login server URL
+#   ACR_SERVICE_CONNECTION    - Service connection for ACR
+#   AZURE_SERVICE_CONNECTION  - Service connection for Azure
+#   RESOURCE_GROUP            - Target resource group
+#   CONTAINER_APP_ENV         - Container Apps environment name
+#   STORAGE_CONNECTION_STRING - Azure Storage connection string
+#   POSTGRES_CONNECTION_STRING - PostgreSQL connection string
+#   IDENTITY_CLIENT_ID        - OpenID Connect client ID for identity.harker.dev
+
+trigger:
+  branches:
+    include:
+      - master
+
+variables:
+  # Container Registry
+  acrName: '$(ACR_NAME)'
+  acrLoginServer: '$(ACR_LOGIN_SERVER)'
+
+  # Container Apps
+  resourceGroup: '$(RESOURCE_GROUP)'
+  containerAppEnv: '$(CONTAINER_APP_ENV)'
+
+  # Image names
+  webImageName: 'insights-web'
+  siloImageName: 'insights-silo'
+
+  # Build configuration
+  dockerfilePath_Web: 'TGHarker.Insights.Web/Dockerfile'
+  dockerfilePath_Silo: 'TGHarker.Insights.Silo/Dockerfile'
+  tag: '$(Build.BuildId)'
+
+stages:
+  - stage: Build
+    displayName: 'Build and Push Images'
+    jobs:
+      - job: BuildImages
+        displayName: 'Build Docker Images'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: Docker@2
+            displayName: 'Login to ACR'
+            inputs:
+              command: login
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+
+          - task: Docker@2
+            displayName: 'Build Insights Web Image'
+            inputs:
+              command: build
+              repository: '$(webImageName)'
+              dockerfile: '$(dockerfilePath_Web)'
+              buildContext: '$(Build.SourcesDirectory)'
+              tags: |
+                $(tag)
+                latest
+
+          - task: Docker@2
+            displayName: 'Build Insights Silo Image'
+            inputs:
+              command: build
+              repository: '$(siloImageName)'
+              dockerfile: '$(dockerfilePath_Silo)'
+              buildContext: '$(Build.SourcesDirectory)'
+              tags: |
+                $(tag)
+                latest
+
+          - task: Docker@2
+            displayName: 'Push Insights Web Image'
+            inputs:
+              command: push
+              repository: '$(webImageName)'
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+              tags: |
+                $(tag)
+                latest
+
+          - task: Docker@2
+            displayName: 'Push Insights Silo Image'
+            inputs:
+              command: push
+              repository: '$(siloImageName)'
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+              tags: |
+                $(tag)
+                latest
+
+  - stage: Migrate
+    displayName: 'Apply Database Migrations'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: ApplyMigrations
+        displayName: 'Apply EF Core Migrations'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UseDotNet@2
+            displayName: 'Install .NET SDK'
+            inputs:
+              packageType: 'sdk'
+              version: '10.x'
+
+          - script: |
+              dotnet tool install --global dotnet-ef
+              echo "##vso[task.prependpath]$HOME/.dotnet/tools"
+            displayName: 'Install EF Core Tools'
+
+          - script: dotnet restore
+            displayName: 'Restore NuGet Packages'
+
+          - script: dotnet build TGHarker.Insights.Silo/TGHarker.Insights.Silo.csproj --no-restore
+            displayName: 'Build Silo Project'
+
+          - script: |
+              dotnet ef database update \
+                --project TGHarker.Insights.Silo/TGHarker.Insights.Silo.csproj \
+                --startup-project TGHarker.Insights.Silo/TGHarker.Insights.Silo.csproj \
+                --no-build
+            displayName: 'Apply Migrations'
+            env:
+              CONNECTION_STRING: $(POSTGRES_CONNECTION_STRING)
+
+  - stage: Deploy
+    displayName: 'Deploy to Container Apps'
+    dependsOn: Migrate
+    condition: succeeded()
+    jobs:
+      - deployment: DeployToACA
+        displayName: 'Deploy to Azure Container Apps'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: 'Deploy Insights Silo'
+                  inputs:
+                    azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      # Check if container app exists
+                      EXISTS=$(az containerapp show \
+                        --name insights-silo \
+                        --resource-group $(resourceGroup) \
+                        --query "name" -o tsv 2>/dev/null || echo "")
+
+                      if [ -z "$EXISTS" ]; then
+                        echo "Creating insights-silo container app..."
+                        az containerapp create \
+                          --name insights-silo \
+                          --resource-group $(resourceGroup) \
+                          --environment $(containerAppEnv) \
+                          --image $(acrLoginServer)/$(siloImageName):$(tag) \
+                          --registry-server $(acrLoginServer) \
+                          --registry-identity system \
+                          --target-port 8080 \
+                          --ingress internal \
+                          --min-replicas 1 \
+                          --max-replicas 3 \
+                          --cpu 0.5 \
+                          --memory 1Gi \
+                          --env-vars \
+                            "ASPNETCORE_ENVIRONMENT=Production" \
+                            "ConnectionStrings__AzureStorage=$(STORAGE_CONNECTION_STRING)" \
+                            "ConnectionStrings__searchdb-insights=$(POSTGRES_CONNECTION_STRING)" \
+                            "Orleans__ClusterId=insights-cluster" \
+                            "Orleans__ServiceId=insights-service"
+                      else
+                        echo "Updating insights-silo container app..."
+                        az containerapp update \
+                          --name insights-silo \
+                          --resource-group $(resourceGroup) \
+                          --image $(acrLoginServer)/$(siloImageName):$(tag) \
+                          --set-env-vars \
+                            "ASPNETCORE_ENVIRONMENT=Production" \
+                            "ConnectionStrings__AzureStorage=$(STORAGE_CONNECTION_STRING)" \
+                            "ConnectionStrings__searchdb-insights=$(POSTGRES_CONNECTION_STRING)" \
+                            "Orleans__ClusterId=insights-cluster" \
+                            "Orleans__ServiceId=insights-service"
+                      fi
+
+                - task: AzureCLI@2
+                  displayName: 'Deploy Insights Web'
+                  inputs:
+                    azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      # Check if container app exists
+                      EXISTS=$(az containerapp show \
+                        --name insights-web \
+                        --resource-group $(resourceGroup) \
+                        --query "name" -o tsv 2>/dev/null || echo "")
+
+                      if [ -z "$EXISTS" ]; then
+                        echo "Creating insights-web container app..."
+                        az containerapp create \
+                          --name insights-web \
+                          --resource-group $(resourceGroup) \
+                          --environment $(containerAppEnv) \
+                          --image $(acrLoginServer)/$(webImageName):$(tag) \
+                          --registry-server $(acrLoginServer) \
+                          --registry-identity system \
+                          --target-port 8080 \
+                          --ingress external \
+                          --min-replicas 1 \
+                          --max-replicas 5 \
+                          --cpu 0.5 \
+                          --memory 1Gi \
+                          --env-vars \
+                            "ASPNETCORE_ENVIRONMENT=Production" \
+                            "ConnectionStrings__AzureStorage=$(STORAGE_CONNECTION_STRING)" \
+                            "ConnectionStrings__searchdb-insights=$(POSTGRES_CONNECTION_STRING)" \
+                            "Orleans__ClusterId=insights-cluster" \
+                            "Orleans__ServiceId=insights-service" \
+                            "Identity__ClientId=$(IDENTITY_CLIENT_ID)"
+                      else
+                        echo "Updating insights-web container app..."
+                        az containerapp update \
+                          --name insights-web \
+                          --resource-group $(resourceGroup) \
+                          --image $(acrLoginServer)/$(webImageName):$(tag) \
+                          --set-env-vars \
+                            "ASPNETCORE_ENVIRONMENT=Production" \
+                            "ConnectionStrings__AzureStorage=$(STORAGE_CONNECTION_STRING)" \
+                            "ConnectionStrings__searchdb-insights=$(POSTGRES_CONNECTION_STRING)" \
+                            "Orleans__ClusterId=insights-cluster" \
+                            "Orleans__ServiceId=insights-service" \
+                            "Identity__ClientId=$(IDENTITY_CLIENT_ID)"
+                      fi
+
+                - task: AzureCLI@2
+                  displayName: 'Verify Deployment'
+                  inputs:
+                    azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      echo "Checking deployment status..."
+
+                      # Get Web app URL
+                      WEB_URL=$(az containerapp show \
+                        --name insights-web \
+                        --resource-group $(resourceGroup) \
+                        --query "properties.configuration.ingress.fqdn" -o tsv)
+
+                      echo "Insights Web URL: https://$WEB_URL"
+
+                      # Check silo status
+                      SILO_STATUS=$(az containerapp show \
+                        --name insights-silo \
+                        --resource-group $(resourceGroup) \
+                        --query "properties.runningStatus" -o tsv)
+
+                      echo "Insights Silo Status: $SILO_STATUS"

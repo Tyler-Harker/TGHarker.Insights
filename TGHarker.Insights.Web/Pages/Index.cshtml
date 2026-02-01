@@ -1,0 +1,521 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+@section Styles {
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 6rem 0;
+        }
+        .hero-section .lead {
+            color: #94a3b8;
+        }
+        .section {
+            padding: 5rem 0;
+        }
+        .section-alt {
+            background-color: var(--bg-surface);
+        }
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .feature-icon-primary {
+            background-color: var(--primary-bg);
+            color: var(--primary);
+        }
+        .feature-icon-success {
+            background-color: var(--success-bg);
+            color: var(--success);
+        }
+        .feature-icon-warning {
+            background-color: var(--warning-bg);
+            color: var(--warning);
+        }
+        .feature-icon-info {
+            background-color: var(--info-bg);
+            color: var(--info);
+        }
+        .step-number {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+        .step-connector {
+            position: absolute;
+            left: 24px;
+            top: 48px;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--border-color);
+        }
+        .dashboard-preview {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+        .preview-header {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 1rem;
+        }
+        .preview-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .preview-dot-red { background-color: #ef4444; }
+        .preview-dot-yellow { background-color: #eab308; }
+        .preview-dot-green { background-color: #22c55e; }
+        .preview-content {
+            background: var(--bg-surface-hover);
+            border-radius: 8px;
+            padding: 1.5rem;
+            min-height: 300px;
+        }
+        .preview-metric {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+        }
+        .preview-metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .preview-metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .preview-chart {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            box-shadow: var(--card-shadow);
+        }
+        .pricing-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            height: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .pricing-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        .pricing-card.featured {
+            border-color: var(--primary);
+            position: relative;
+        }
+        .pricing-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .pricing-price {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .pricing-period {
+            color: var(--text-muted);
+        }
+        .check-icon {
+            color: var(--success);
+            margin-right: 0.5rem;
+        }
+        .cta-section {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 5rem 0;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+        }
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        .landing-footer {
+            background-color: var(--bg-surface);
+            border-color: var(--border-color) !important;
+        }
+        .code-block {
+            background-color: var(--code-bg);
+            color: var(--text-primary);
+        }
+        .code-block code {
+            background: transparent;
+            color: var(--code-text);
+        }
+        /* Feature titles */
+        .feature-title {
+            color: var(--text-primary);
+        }
+        /* Section headings */
+        .section-heading {
+            color: var(--text-primary);
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .chart-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-hover));
+        }
+    </style>
+}
+
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">Simple, Privacy-Friendly Analytics</h1>
+                <p class="lead mb-4">
+                    Understand your website traffic without compromising user privacy.
+                    Self-hosted, open-source, and built with modern technology.
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <a href="/dashboard" class="btn btn-light btn-lg px-4">Go to Dashboard</a>
+                    }
+                    else
+                    {
+                        <a href="/login" class="btn btn-light btn-lg px-4">Get Started Free</a>
+                        <a href="#features" class="btn btn-outline-light btn-lg px-4">Learn More</a>
+                    }
+                </div>
+            </div>
+            <div class="col-lg-6 mt-5 mt-lg-0">
+                <div class="dashboard-preview">
+                    <div class="preview-header">
+                        <div class="preview-dot preview-dot-red"></div>
+                        <div class="preview-dot preview-dot-yellow"></div>
+                        <div class="preview-dot preview-dot-green"></div>
+                    </div>
+                    <div class="preview-content">
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <div class="preview-metric">
+                                    <div class="preview-metric-value">2,847</div>
+                                    <div class="preview-metric-label">Visitors</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="preview-metric">
+                                    <div class="preview-metric-value">8,421</div>
+                                    <div class="preview-metric-label">Page Views</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="preview-metric">
+                                    <div class="preview-metric-value">3.2m</div>
+                                    <div class="preview-metric-label">Avg. Time</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="preview-chart">
+                            <div class="d-flex align-items-end gap-2" style="height: 80px;">
+                                <div class="chart-bar" style="width: 8%; height: 30%;"></div>
+                                <div class="chart-bar" style="width: 8%; height: 45%;"></div>
+                                <div class="chart-bar" style="width: 8%; height: 35%;"></div>
+                                <div class="chart-bar" style="width: 8%; height: 60%;"></div>
+                                <div class="chart-bar" style="width: 8%; height: 80%;"></div>
+                                <div class="chart-bar" style="width: 8%; height: 65%;"></div>
+                                <div class="chart-bar" style="width: 8%; height: 90%;"></div>
+                                <div class="chart-bar" style="width: 8%; height: 75%;"></div>
+                                <div class="chart-bar" style="width: 8%; height: 55%;"></div>
+                                <div class="chart-bar" style="width: 8%; height: 70%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Bar -->
+<div class="section-alt py-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">Privacy Compliant</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value">&lt;1KB</div>
+                    <div class="stat-label">Script Size</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Cookies Required</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value">GDPR</div>
+                    <div class="stat-label">Compliant</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="section" id="features">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-6 fw-bold section-heading">Everything you need to understand your traffic</h2>
+            <p class="lead text-muted">Powerful analytics without the complexity or privacy concerns</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-icon feature-icon-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M0 0h1v15h15v1H0V0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07Z"/>
+                    </svg>
+                </div>
+                <h5 class="fw-semibold feature-title">Real-time Analytics</h5>
+                <p class="text-muted">See what's happening on your site right now with live visitor counts, active pages, and instant updates.</p>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-icon feature-icon-success">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5z"/>
+                    </svg>
+                </div>
+                <h5 class="fw-semibold feature-title">Traffic Sources</h5>
+                <p class="text-muted">Understand where your visitors come from - search engines, social media, referrals, or direct traffic.</p>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-icon feature-icon-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                    </svg>
+                </div>
+                <h5 class="fw-semibold feature-title">Goal Tracking</h5>
+                <p class="text-muted">Set up conversion goals and track what matters most to your business with custom events.</p>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-icon feature-icon-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
+                    </svg>
+                </div>
+                <h5 class="fw-semibold feature-title">Custom Events</h5>
+                <p class="text-muted">Track button clicks, form submissions, downloads, and any custom interaction on your site.</p>
+            </div>
+        </div>
+
+        <!-- Extended Features -->
+        <div class="row g-4 mt-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-icon feature-icon-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm7.5-6.923c-.67.204-1.335.82-1.887 1.855A7.97 7.97 0 0 0 5.145 4H7.5V1.077zM4.09 4a9.267 9.267 0 0 1 .64-1.539 6.7 6.7 0 0 1 .597-.933A7.025 7.025 0 0 0 2.255 4H4.09zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a6.958 6.958 0 0 0-.656 2.5h2.49zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5H4.847zM8.5 5v2.5h2.99a12.495 12.495 0 0 0-.337-2.5H8.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5H4.51zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5H8.5zM5.145 12c.138.386.295.744.468 1.068.552 1.035 1.218 1.65 1.887 1.855V12H5.145zm.182 2.472a6.696 6.696 0 0 1-.597-.933A9.268 9.268 0 0 1 4.09 12H2.255a7.024 7.024 0 0 0 3.072 2.472zM3.82 11a13.652 13.652 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5H3.82zm6.853 3.472A7.024 7.024 0 0 0 13.745 12H11.91a9.27 9.27 0 0 1-.64 1.539 6.688 6.688 0 0 1-.597.933zM8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855.173-.324.33-.682.468-1.068H8.5zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.65 13.65 0 0 1-.312 2.5zm2.802-3.5a6.959 6.959 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5h2.49zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7.024 7.024 0 0 0-3.072-2.472c.218.284.418.598.597.933zM10.855 4a7.966 7.966 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4h2.355z"/>
+                    </svg>
+                </div>
+                <h5 class="fw-semibold feature-title">Geographic Data</h5>
+                <p class="text-muted">See where your visitors are located with country and city-level insights without tracking individuals.</p>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-icon feature-icon-success">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h6zM5 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H5z"/>
+                        <path d="M8 14a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                    </svg>
+                </div>
+                <h5 class="fw-semibold feature-title">Device Analytics</h5>
+                <p class="text-muted">Understand your audience with browser, device type, and screen size breakdowns.</p>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-icon feature-icon-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/>
+                        <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5L9.5 0zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                    </svg>
+                </div>
+                <h5 class="fw-semibold feature-title">Page Performance</h5>
+                <p class="text-muted">Track your top pages, entry points, exit pages, and bounce rates to optimize content.</p>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-icon feature-icon-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.057.218.095.293.118a.55.55 0 0 0 .101.025.615.615 0 0 0 .1-.025c.076-.023.174-.061.294-.118.24-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.159 7.159 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.158 7.158 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z"/>
+                        <path d="M10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                    </svg>
+                </div>
+                <h5 class="fw-semibold feature-title">Privacy First</h5>
+                <p class="text-muted">No cookies, no personal data collection. Fully GDPR, CCPA, and PECR compliant out of the box.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How It Works Section -->
+<div class="section section-alt" id="how-it-works">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-6 fw-bold section-heading">Get started in minutes</h2>
+            <p class="lead text-muted">Simple setup, powerful results</p>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="d-flex mb-4">
+                    <div class="step-number me-4">1</div>
+                    <div>
+                        <h5 class="fw-semibold feature-title">Create your application</h5>
+                        <p class="text-muted mb-0">Sign up and add your website. Get a unique tracking ID in seconds.</p>
+                    </div>
+                </div>
+                <div class="d-flex mb-4">
+                    <div class="step-number me-4">2</div>
+                    <div>
+                        <h5 class="fw-semibold feature-title">Add the tracking script</h5>
+                        <p class="text-muted mb-0">Copy and paste a single line of JavaScript to your site. Under 1KB, no impact on performance.</p>
+                    </div>
+                </div>
+                <div class="d-flex mb-4">
+                    <div class="step-number me-4">3</div>
+                    <div>
+                        <h5 class="fw-semibold feature-title">Start tracking</h5>
+                        <p class="text-muted mb-0">See visitors appear in real-time. Set up goals, track events, and gain insights immediately.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="text-center mt-5">
+            <div class="code-block rounded-3 p-4 d-inline-block">
+                <code>&lt;script src="https://your-domain/sdk/insights.js" data-application="YOUR_ID"&gt;&lt;/script&gt;</code>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pricing Section -->
+<div class="section" id="pricing">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-6 fw-bold section-heading">Simple, transparent pricing</h2>
+            <p class="lead text-muted">Self-hosted means you control the costs</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="pricing-card">
+                    <h4 class="fw-semibold mb-2 feature-title">Self-Hosted</h4>
+                    <p class="text-muted mb-4">Host on your own infrastructure</p>
+                    <div class="mb-4">
+                        <span class="pricing-price">Free</span>
+                        <span class="pricing-period">/ forever</span>
+                    </div>
+                    <ul class="list-unstyled mb-4">
+                        <li class="mb-2"><span class="check-icon">&#10003;</span> Unlimited websites</li>
+                        <li class="mb-2"><span class="check-icon">&#10003;</span> Unlimited page views</li>
+                        <li class="mb-2"><span class="check-icon">&#10003;</span> All features included</li>
+                        <li class="mb-2"><span class="check-icon">&#10003;</span> Full data ownership</li>
+                        <li class="mb-2"><span class="check-icon">&#10003;</span> Open source</li>
+                    </ul>
+                    <a href="https://github.com" class="btn btn-outline-primary w-100">View on GitHub</a>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="pricing-card featured">
+                    <span class="pricing-badge">Coming Soon</span>
+                    <h4 class="fw-semibold mb-2 feature-title">Cloud Hosted</h4>
+                    <p class="text-muted mb-4">We handle the infrastructure</p>
+                    <div class="mb-4">
+                        <span class="pricing-price">$9</span>
+                        <span class="pricing-period">/ month</span>
+                    </div>
+                    <ul class="list-unstyled mb-4">
+                        <li class="mb-2"><span class="check-icon">&#10003;</span> Up to 100k page views</li>
+                        <li class="mb-2"><span class="check-icon">&#10003;</span> Managed infrastructure</li>
+                        <li class="mb-2"><span class="check-icon">&#10003;</span> Automatic updates</li>
+                        <li class="mb-2"><span class="check-icon">&#10003;</span> Email support</li>
+                        <li class="mb-2"><span class="check-icon">&#10003;</span> Daily backups</li>
+                    </ul>
+                    <button class="btn btn-primary w-100" disabled>Join Waitlist</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CTA Section -->
+<div class="cta-section">
+    <div class="container text-center">
+        <h2 class="display-6 fw-bold mb-3">Ready to take control of your analytics?</h2>
+        <p class="lead mb-4" style="color: #94a3b8;">
+            Join thousands of developers who trust Insights for privacy-friendly analytics.
+        </p>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a href="/dashboard" class="btn btn-light btn-lg px-5">Go to Dashboard</a>
+        }
+        else
+        {
+            <a href="/login" class="btn btn-light btn-lg px-5">Get Started Free</a>
+        }
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="landing-footer py-4 border-top">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <span class="text-muted">Built with privacy in mind.</span>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <a href="#" class="text-muted me-3">Documentation</a>
+                <a href="#" class="text-muted me-3">GitHub</a>
+                <a href="#" class="text-muted">Privacy</a>
+            </div>
+        </div>
+    </div>
+</footer>

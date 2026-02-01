@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="TGHarker.Insights.Abstractions/TGHarker.Insights.Abstractions.csproj" />
+  <Project Path="TGHarker.Insights.AppHost/TGHarker.Insights.AppHost.csproj" />
+  <Project Path="TGHarker.Insights.Grains/TGHarker.Insights.Grains.csproj" />
+  <Project Path="TGHarker.Insights.ServiceDefaults/TGHarker.Insights.ServiceDefaults.csproj" />
+  <Project Path="TGHarker.Insights.Silo/TGHarker.Insights.Silo.csproj" />
+  <Project Path="TGHarker.Insights.Tests/TGHarker.Insights.Tests.csproj" />
+  <Project Path="TGHarker.Insights.Web/TGHarker.Insights.Web.csproj" />
+</Solution>

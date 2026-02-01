@@ -1,0 +1,352 @@
+@page "/dashboard/{applicationId}/funnels"
+@model TGHarker.Insights.Web.Pages.Dashboard.Application.FunnelsModel
+@using TGHarker.Insights.Abstractions.Models
+@{
+    ViewData["Title"] = "Funnels";
+    Layout = "_DashboardLayout";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header">
+        <h4>Funnels</h4>
+        <p class="page-description">Track user journeys through multi-step processes and identify where visitors drop off.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <div class="btn-group">
+            <a href="/dashboard/@Model.ApplicationId/funnels?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
+            <a href="/dashboard/@Model.ApplicationId/funnels?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
+            <a href="/dashboard/@Model.ApplicationId/funnels?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+        </div>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newFunnelModal">
+            <i class="bi bi-plus-lg me-1"></i> New Funnel
+        </button>
+    </div>
+</div>
+
+<div class="info-callout">
+    <div class="info-callout-title"><i class="bi bi-filter me-2"></i>What are Funnels?</div>
+    <p class="info-callout-text">
+        Funnels help you understand how users progress through a series of steps. Define steps as <strong>page visits</strong> (e.g., visiting /pricing)
+        or <strong>custom events</strong> (e.g., clicking "Sign Up"). Track conversion rates between each step to identify optimization opportunities.
+    </p>
+</div>
+
+@if (Model.Funnels.Any())
+{
+    @foreach (var funnel in Model.Funnels)
+    {
+        var analytics = Model.FunnelAnalytics.GetValueOrDefault(funnel.Id);
+        <div class="chart-container mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="mb-0">@funnel.Name</h6>
+                    <small class="text-muted">@funnel.Steps.Count steps</small>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    @if (analytics != null)
+                    {
+                        <span class="badge bg-primary">@analytics.OverallConversionRate.ToString("F1")% conversion</span>
+                    }
+                    <form method="post" asp-page-handler="DeleteFunnel" class="d-inline" onsubmit="return confirm('Delete this funnel?');">
+                        <input type="hidden" name="funnelId" value="@funnel.Id" />
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            @if (analytics != null && analytics.Steps.Any())
+            {
+                <div class="funnel-visualization">
+                    @{
+                        var maxVisitors = analytics.Steps.Max(s => s.Visitors);
+                    }
+                    @foreach (var step in analytics.Steps)
+                    {
+                        var widthPercent = maxVisitors > 0 ? (double)step.Visitors / maxVisitors * 100 : 0;
+                        var funnelStep = funnel.Steps.FirstOrDefault(s => s.Order == step.Order);
+                        <div class="funnel-step mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div>
+                                    <span class="fw-medium">@step.Order. @step.Name</span>
+                                    <span class="badge bg-secondary ms-2">@(step.Type == FunnelStepType.PageVisit ? "Page" : "Event")</span>
+                                    @if (step.Type == FunnelStepType.PageVisit && funnelStep?.PagePath != null)
+                                    {
+                                        <code class="ms-2 small">@funnelStep.PagePath</code>
+                                    }
+                                    else if (step.Type == FunnelStepType.Event && funnelStep != null)
+                                    {
+                                        <code class="ms-2 small">@funnelStep.EventCategory / @funnelStep.EventAction</code>
+                                    }
+                                </div>
+                                <div class="text-end">
+                                    <span class="fw-bold">@step.Visitors.ToString("N0")</span>
+                                    <span class="text-muted small ms-1">visitors</span>
+                                </div>
+                            </div>
+                            <div class="progress" style="height: 24px;">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: @widthPercent.ToString("F1")%"></div>
+                            </div>
+                            @if (step.Order > 1)
+                            {
+                                <div class="d-flex justify-content-between small mt-1">
+                                    <span class="text-success"><i class="bi bi-arrow-down me-1"></i>@step.ConversionRate.ToString("F1")% converted</span>
+                                    <span class="text-danger"><i class="bi bi-x me-1"></i>@step.DropOffRate.ToString("F1")% dropped off</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4 text-muted">
+                    <p>No data available for this funnel in the last 30 days.</p>
+                </div>
+            }
+        </div>
+    }
+}
+else
+{
+    <div class="chart-container">
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-filter fs-1 d-block mb-3"></i>
+            <h5>No funnels configured yet</h5>
+            <p>Create a funnel to start tracking user journeys through your site.</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newFunnelModal">
+                <i class="bi bi-plus-lg me-1"></i> Create Your First Funnel
+            </button>
+        </div>
+    </div>
+}
+
+<!-- Autocomplete datalists -->
+<datalist id="routesList">
+    @foreach (var route in Model.AvailableRoutes)
+    {
+        <option value="@route"></option>
+    }
+</datalist>
+<datalist id="categoriesList">
+    @foreach (var category in Model.AvailableEventCategories)
+    {
+        <option value="@category"></option>
+    }
+</datalist>
+
+<!-- New Funnel Modal -->
+<div class="modal fade" id="newFunnelModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Funnel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="CreateFunnel" id="createFunnelForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Funnel Name</label>
+                        <input type="text" class="form-control" name="funnelName" required placeholder="e.g., Signup Flow, Purchase Funnel">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Steps</label>
+                        <p class="text-muted small">Define the steps users should take in order. Add at least 2 steps.</p>
+
+                        <div id="stepsContainer">
+                            <!-- Steps will be added here dynamically -->
+                        </div>
+
+                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addStep()">
+                            <i class="bi bi-plus me-1"></i> Add Step
+                        </button>
+                    </div>
+
+                    <input type="hidden" name="stepsJson" id="stepsJson" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Funnel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+    .funnel-step .progress {
+        border-radius: 4px;
+    }
+    .funnel-step .progress-bar {
+        transition: width 0.6s ease;
+    }
+    .step-card {
+        background: var(--bg-surface-hover);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--border-color);
+    }
+    .step-card .step-number {
+        width: 24px;
+        height: 24px;
+        background: var(--primary);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .autocomplete-hint {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+</style>
+<script>
+    // Autocomplete data from server
+    const availableRoutes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableRoutes));
+    const availableCategories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableEventCategories));
+    const eventActionsByCategory = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.EventActionsByCategory));
+
+    let stepCount = 0;
+
+    function addStep() {
+        stepCount++;
+        const container = document.getElementById('stepsContainer');
+        const stepHtml = `
+            <div class="step-card" id="step-${stepCount}">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="step-number">${stepCount}</div>
+                        <input type="text" class="form-control form-control-sm" placeholder="Step name"
+                               id="stepName-${stepCount}" style="width: 200px;" required>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeStep(${stepCount})">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <select class="form-select form-select-sm" id="stepType-${stepCount}" onchange="toggleStepFields(${stepCount})">
+                            <option value="PageVisit">Page Visit</option>
+                            <option value="Event">Custom Event</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8" id="stepFields-${stepCount}">
+                        <input type="text" class="form-control form-control-sm" id="stepPath-${stepCount}"
+                               placeholder="/pricing (use * for wildcard)" list="routesList">
+                        ${availableRoutes.length > 0 ? '<div class="autocomplete-hint"><i class="bi bi-lightbulb me-1"></i>Start typing to see suggestions from your tracked pages</div>' : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', stepHtml);
+        updateStepNumbers();
+    }
+
+    function removeStep(id) {
+        const step = document.getElementById(`step-${id}`);
+        if (step) {
+            step.remove();
+            updateStepNumbers();
+        }
+    }
+
+    function updateStepNumbers() {
+        const steps = document.querySelectorAll('.step-card');
+        steps.forEach((step, index) => {
+            const numberEl = step.querySelector('.step-number');
+            if (numberEl) {
+                numberEl.textContent = index + 1;
+            }
+        });
+    }
+
+    function toggleStepFields(id) {
+        const typeSelect = document.getElementById(`stepType-${id}`);
+        const fieldsContainer = document.getElementById(`stepFields-${id}`);
+
+        if (typeSelect.value === 'PageVisit') {
+            fieldsContainer.innerHTML = `
+                <input type="text" class="form-control form-control-sm" id="stepPath-${id}"
+                       placeholder="/pricing (use * for wildcard)" list="routesList">
+                ${availableRoutes.length > 0 ? '<div class="autocomplete-hint"><i class="bi bi-lightbulb me-1"></i>Start typing to see suggestions from your tracked pages</div>' : ''}
+            `;
+        } else {
+            fieldsContainer.innerHTML = `
+                <div class="row g-2">
+                    <div class="col-6">
+                        <input type="text" class="form-control form-control-sm" id="stepCategory-${id}"
+                               placeholder="Event category" list="categoriesList" onchange="updateActionsList(${id})">
+                    </div>
+                    <div class="col-6">
+                        <input type="text" class="form-control form-control-sm" id="stepAction-${id}"
+                               placeholder="Event action" list="actionsList-${id}">
+                        <datalist id="actionsList-${id}"></datalist>
+                    </div>
+                </div>
+                ${availableCategories.length > 0 ? '<div class="autocomplete-hint"><i class="bi bi-lightbulb me-1"></i>Start typing to see suggestions from your tracked events</div>' : ''}
+            `;
+        }
+    }
+
+    function updateActionsList(stepId) {
+        const categoryInput = document.getElementById(`stepCategory-${stepId}`);
+        const actionsDatalist = document.getElementById(`actionsList-${stepId}`);
+        const category = categoryInput?.value;
+
+        if (actionsDatalist && category && eventActionsByCategory[category]) {
+            actionsDatalist.innerHTML = eventActionsByCategory[category]
+                .map(action => `<option value="${action}">`)
+                .join('');
+        } else if (actionsDatalist) {
+            actionsDatalist.innerHTML = '';
+        }
+    }
+
+    // Add initial steps
+    addStep();
+    addStep();
+
+    // Form submission handler
+    document.getElementById('createFunnelForm').addEventListener('submit', function(e) {
+        const steps = [];
+        const stepCards = document.querySelectorAll('.step-card');
+
+        stepCards.forEach((card, index) => {
+            const id = card.id.replace('step-', '');
+            const name = document.getElementById(`stepName-${id}`)?.value || `Step ${index + 1}`;
+            const type = document.getElementById(`stepType-${id}`)?.value || 'PageVisit';
+
+            const step = {
+                order: index + 1,
+                name: name,
+                type: type
+            };
+
+            if (type === 'PageVisit') {
+                step.pagePath = document.getElementById(`stepPath-${id}`)?.value || '';
+            } else {
+                step.eventCategory = document.getElementById(`stepCategory-${id}`)?.value || '';
+                step.eventAction = document.getElementById(`stepAction-${id}`)?.value || '';
+            }
+
+            steps.push(step);
+        });
+
+        if (steps.length < 2) {
+            e.preventDefault();
+            alert('Please add at least 2 steps to the funnel.');
+            return;
+        }
+
+        document.getElementById('stepsJson').value = JSON.stringify(steps);
+    });
+</script>
+}

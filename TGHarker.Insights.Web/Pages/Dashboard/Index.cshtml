@@ -1,0 +1,54 @@
+@page "/dashboard"
+@model TGHarker.Insights.Web.Pages.Dashboard.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row">
+    <div class="col-md-3 sidebar py-4">
+        <h6 class="px-3 text-muted text-uppercase small fw-bold mb-3">Applications</h6>
+        <nav class="nav flex-column">
+            @foreach (var app in Model.Applications)
+            {
+                var appId = app.Id.StartsWith("app-") ? app.Id[4..] : app.Id;
+                <a class="nav-link" href="/dashboard/@appId">
+                    @app.Name
+                    <small class="text-muted d-block">@app.Domain</small>
+                </a>
+            }
+        </nav>
+        <div class="px-3 mt-4">
+            <a href="/dashboard/new" class="btn btn-primary btn-sm w-100">Add Application</a>
+        </div>
+    </div>
+    <div class="col-md-9 py-4">
+        <div class="container">
+            @if (Model.Applications.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <h3>Welcome to Insights!</h3>
+                    <p class="text-muted">Create your first application to start tracking analytics.</p>
+                    <a href="/dashboard/new" class="btn btn-primary">Create Application</a>
+                </div>
+            }
+            else
+            {
+                <h4 class="mb-4">Select an application to view analytics</h4>
+                <div class="row">
+                    @foreach (var app in Model.Applications)
+                    {
+                        var appId = app.Id.StartsWith("app-") ? app.Id[4..] : app.Id;
+                        <div class="col-md-6 mb-3">
+                            <a href="/dashboard/@appId" class="text-decoration-none">
+                                <div class="metric-card">
+                                    <h5 class="mb-1">@app.Name</h5>
+                                    <small class="text-muted">@app.Domain</small>
+                                </div>
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
