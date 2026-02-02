@@ -143,6 +143,44 @@ stages:
             deploy:
               steps:
                 - task: AzureCLI@2
+                  displayName: 'Grant ACR Pull Access to Container Apps'
+                  inputs:
+                    azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      # Get ACR resource ID
+                      ACR_ID=$(az acr show --name $(acrName) --query id -o tsv)
+
+                      # Grant AcrPull role to insights-silo managed identity (if it exists)
+                      SILO_IDENTITY=$(az containerapp show \
+                        --name insights-silo \
+                        --resource-group $(resourceGroup) \
+                        --query "identity.principalId" -o tsv 2>/dev/null || echo "")
+
+                      if [ -n "$SILO_IDENTITY" ]; then
+                        echo "Granting AcrPull to insights-silo identity..."
+                        az role assignment create \
+                          --assignee "$SILO_IDENTITY" \
+                          --role AcrPull \
+                          --scope "$ACR_ID" 2>/dev/null || echo "Role may already exist"
+                      fi
+
+                      # Grant AcrPull role to insights-web managed identity (if it exists)
+                      WEB_IDENTITY=$(az containerapp show \
+                        --name insights-web \
+                        --resource-group $(resourceGroup) \
+                        --query "identity.principalId" -o tsv 2>/dev/null || echo "")
+
+                      if [ -n "$WEB_IDENTITY" ]; then
+                        echo "Granting AcrPull to insights-web identity..."
+                        az role assignment create \
+                          --assignee "$WEB_IDENTITY" \
+                          --role AcrPull \
+                          --scope "$ACR_ID" 2>/dev/null || echo "Role may already exist"
+                      fi
+
+                - task: AzureCLI@2
                   displayName: 'Deploy Insights Silo'
                   inputs:
                     azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
@@ -178,6 +216,14 @@ stages:
                             "Orleans__ServiceId=insights-service"
                       else
                         echo "Updating insights-silo container app..."
+
+                        # Ensure registry is configured with managed identity
+                        az containerapp registry set \
+                          --name insights-silo \
+                          --resource-group $(resourceGroup) \
+                          --server $(acrLoginServer) \
+                          --identity system
+
                         az containerapp update \
                           --name insights-silo \
                           --resource-group $(resourceGroup) \
@@ -227,6 +273,14 @@ stages:
                             "Identity__ClientId=$(IDENTITY_CLIENT_ID)"
                       else
                         echo "Updating insights-web container app..."
+
+                        # Ensure registry is configured with managed identity
+                        az containerapp registry set \
+                          --name insights-web \
+                          --resource-group $(resourceGroup) \
+                          --server $(acrLoginServer) \
+                          --identity system
+
                         az containerapp update \
                           --name insights-web \
                           --resource-group $(resourceGroup) \
