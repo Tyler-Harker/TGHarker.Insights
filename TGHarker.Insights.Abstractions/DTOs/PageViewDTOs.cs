@@ -29,5 +29,6 @@ public record PageViewRecordData(
     [property: Id(2)] string VisitorId,
     [property: Id(3)] string PagePath,
     [property: Id(4)] string PageTitle,
-    [property: Id(5)] DateTime Timestamp
+    [property: Id(5)] DateTime Timestamp,
+    [property: Id(6)] string OrganizationId
 );

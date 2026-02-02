@@ -15,6 +15,10 @@ public sealed class ConversionState
     [Queryable(Indexed = true)]
     public string ApplicationId { get; set; } = string.Empty;
 
+    [Id(9)]
+    [Queryable(Indexed = true)]
+    public string OrganizationId { get; set; } = string.Empty;
+
     [Id(2)]
     [Queryable(Indexed = true)]
     public string GoalId { get; set; } = string.Empty;

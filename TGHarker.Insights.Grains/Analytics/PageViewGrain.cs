@@ -22,6 +22,7 @@ public class PageViewGrain : Grain, IPageViewGrain
         {
             Id = this.GetPrimaryKeyString(),
             ApplicationId = data.ApplicationId,
+            OrganizationId = data.OrganizationId,
             SessionId = data.SessionId,
             VisitorId = data.VisitorId,
             PagePath = data.PagePath,

@@ -28,6 +28,7 @@ public class SessionGrain : Grain, ISessionGrain
         {
             Id = this.GetPrimaryKeyString(),
             ApplicationId = data.ApplicationId,
+            OrganizationId = data.OrganizationId,
             VisitorId = data.VisitorId,
             StartedAt = now,
             ReferrerUrl = data.ReferrerUrl,

@@ -24,5 +24,6 @@ public record VisitData(
     [property: Id(1)] string? Country,
     [property: Id(2)] string? City,
     [property: Id(3)] string? UserAgent,
-    [property: Id(4)] DeviceInfo? Device
+    [property: Id(4)] DeviceInfo? Device,
+    [property: Id(5)] string OrganizationId
 );

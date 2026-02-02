@@ -14,6 +14,10 @@ public sealed class HourlyMetricsState
     [Queryable(Indexed = true)]
     public string ApplicationId { get; set; } = string.Empty;
 
+    [Id(14)]
+    [Queryable(Indexed = true)]
+    public string OrganizationId { get; set; } = string.Empty;
+
     [Id(2)]
     [Queryable(Indexed = true)]
     public DateTime HourStart { get; set; }

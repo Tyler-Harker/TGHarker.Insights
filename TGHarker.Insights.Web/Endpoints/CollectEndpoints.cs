@@ -53,13 +53,17 @@ public static class CollectEndpoints
         if (!await applicationGrain.ValidateOriginAsync(origin))
             return Results.StatusCode(403);
 
+        // Get organization ID from application
+        var appInfo = await applicationGrain.GetInfoAsync();
+        var organizationId = appInfo.OrganizationId;
+
         // Add CORS headers for the response
         if (!string.IsNullOrEmpty(origin))
         {
             context.Response.Headers.AccessControlAllowOrigin = origin;
         }
 
-        await ProcessEvent(client, request, logger);
+        await ProcessEvent(client, request, organizationId, logger);
         return Results.NoContent();
     }
 
@@ -79,6 +83,10 @@ public static class CollectEndpoints
         if (!await applicationGrain.ValidateOriginAsync(origin))
             return Results.StatusCode(403);
 
+        // Get organization ID from application
+        var appInfo = await applicationGrain.GetInfoAsync();
+        var organizationId = appInfo.OrganizationId;
+
         // Add CORS headers for the response
         if (!string.IsNullOrEmpty(origin))
         {
@@ -87,7 +95,7 @@ public static class CollectEndpoints
 
         foreach (var evt in request.Events)
         {
-            await ProcessEvent(client, evt, logger);
+            await ProcessEvent(client, evt, organizationId, logger);
         }
 
         return Results.NoContent();
@@ -118,6 +126,7 @@ public static class CollectEndpoints
     private static async Task ProcessEvent(
         IClusterClient client,
         CollectRequest request,
+        string organizationId,
         ILogger logger)
     {
         var visitorGrainKey = $"visitor-{request.ApplicationId}-{request.VisitorId}";
@@ -126,15 +135,15 @@ public static class CollectEndpoints
         switch (request.Type.ToLowerInvariant())
         {
             case "session_start":
-                await HandleSessionStart(client, request, visitorGrainKey, sessionGrainKey);
+                await HandleSessionStart(client, request, organizationId, visitorGrainKey, sessionGrainKey);
                 break;
 
             case "pageview":
-                await HandlePageView(client, request, sessionGrainKey);
+                await HandlePageView(client, request, organizationId, sessionGrainKey);
                 break;
 
             case "event":
-                await HandleEvent(client, request, sessionGrainKey);
+                await HandleEvent(client, request, organizationId, sessionGrainKey);
                 break;
 
             case "session_end":
@@ -166,6 +175,7 @@ public static class CollectEndpoints
     private static async Task HandleSessionStart(
         IClusterClient client,
         CollectRequest request,
+        string organizationId,
         string visitorGrainKey,
         string sessionGrainKey)
     {
@@ -178,7 +188,8 @@ public static class CollectEndpoints
             null,
             null,
             request.Context.UserAgent,
-            ParseDeviceInfo(request.Context.UserAgent)
+            ParseDeviceInfo(request.Context.UserAgent),
+            organizationId
         ));
 
         // Start session
@@ -190,13 +201,15 @@ public static class CollectEndpoints
             GetJsonString(data, "landingPage"),
             GetJsonString(data, "utmSource"),
             GetJsonString(data, "utmMedium"),
-            GetJsonString(data, "utmCampaign")
+            GetJsonString(data, "utmCampaign"),
+            organizationId
         ));
     }
 
     private static async Task HandlePageView(
         IClusterClient client,
         CollectRequest request,
+        string organizationId,
         string sessionGrainKey)
     {
         var data = request.Data;
@@ -211,7 +224,8 @@ public static class CollectEndpoints
             request.VisitorId,
             GetJsonString(data, "path") ?? "/",
             GetJsonString(data, "title") ?? "",
-            request.Timestamp
+            request.Timestamp,
+            organizationId
         ));
 
         // Update session
@@ -226,6 +240,7 @@ public static class CollectEndpoints
     private static async Task HandleEvent(
         IClusterClient client,
         CollectRequest request,
+        string organizationId,
         string sessionGrainKey)
     {
         var data = request.Data;
@@ -246,7 +261,8 @@ public static class CollectEndpoints
             GetJsonString(data, "label"),
             GetJsonDecimal(data, "value"),
             request.Timestamp,
-            null
+            null,
+            organizationId
         ));
 
         // Update session

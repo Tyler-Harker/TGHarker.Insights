@@ -14,6 +14,10 @@ public sealed class EventState
     [Queryable(Indexed = true)]
     public string ApplicationId { get; set; } = string.Empty;
 
+    [Id(10)]
+    [Queryable(Indexed = true)]
+    public string OrganizationId { get; set; } = string.Empty;
+
     [Id(2)]
     [Queryable(Indexed = true)]
     public string SessionId { get; set; } = string.Empty;

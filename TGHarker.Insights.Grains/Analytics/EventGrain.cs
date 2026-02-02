@@ -22,6 +22,7 @@ public class EventGrain : Grain, IEventGrain
         {
             Id = this.GetPrimaryKeyString(),
             ApplicationId = data.ApplicationId,
+            OrganizationId = data.OrganizationId,
             SessionId = data.SessionId,
             VisitorId = data.VisitorId,
             Category = data.Category,

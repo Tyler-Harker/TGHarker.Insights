@@ -43,6 +43,7 @@ public class VisitorGrain : Grain, IVisitorGrain
         {
             _state.State.Id = this.GetPrimaryKeyString();
             _state.State.ApplicationId = data.ApplicationId;
+            _state.State.OrganizationId = data.OrganizationId;
             _state.State.FirstSeen = now;
         }
 

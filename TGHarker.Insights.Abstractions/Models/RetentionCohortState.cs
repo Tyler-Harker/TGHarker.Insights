@@ -14,6 +14,10 @@ public sealed class RetentionCohortState
     [Queryable(Indexed = true)]
     public string ApplicationId { get; set; } = string.Empty;
 
+    [Id(6)]
+    [Queryable(Indexed = true)]
+    public string OrganizationId { get; set; } = string.Empty;
+
     [Id(2)]
     [Queryable(Indexed = true)]
     public string CohortWeek { get; set; } = string.Empty;

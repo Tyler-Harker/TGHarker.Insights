@@ -26,5 +26,6 @@ public record SessionStartData(
     [property: Id(3)] string? LandingPage,
     [property: Id(4)] string? UtmSource,
     [property: Id(5)] string? UtmMedium,
-    [property: Id(6)] string? UtmCampaign
+    [property: Id(6)] string? UtmCampaign,
+    [property: Id(7)] string OrganizationId
 );

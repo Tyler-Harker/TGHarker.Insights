@@ -34,5 +34,6 @@ public record EventRecordData(
     [property: Id(5)] string? Label,
     [property: Id(6)] decimal? Value,
     [property: Id(7)] DateTime Timestamp,
-    [property: Id(8)] Dictionary<string, string>? CustomProperties
+    [property: Id(8)] Dictionary<string, string>? CustomProperties,
+    [property: Id(9)] string OrganizationId
 );
