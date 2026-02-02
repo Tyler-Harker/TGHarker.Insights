@@ -55,8 +55,8 @@ builder.UseOrleans(siloBuilder =>
 
         siloBuilder.Configure<ClusterOptions>(options =>
         {
-            options.ClusterId = builder.Configuration["Orleans:ClusterId"] ?? "emails-cluster";
-            options.ServiceId = builder.Configuration["Orleans:ServiceId"] ?? "emails-service";
+            options.ClusterId = builder.Configuration["Orleans:ClusterId"] ?? "insights-cluster";
+            options.ServiceId = builder.Configuration["Orleans:ServiceId"] ?? "insights-service";
         });
 
         // Use Azure Table Storage for clustering
