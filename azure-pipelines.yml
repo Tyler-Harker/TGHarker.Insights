@@ -188,7 +188,7 @@ stages:
                             "ConnectionStrings__AzureStorage=$(STORAGE_CONNECTION_STRING)" \
                             "ConnectionStrings__searchdb-insights=$(POSTGRES_CONNECTION_STRING)" \
                             "Orleans__ClusterId=insights-cluster" \
-                            "Orleans__ServiceId=insights-service" \
+                            "Orleans__ServiceId=insights-service"
                       fi
 
                 - task: AzureCLI@2
@@ -239,7 +239,7 @@ stages:
                             "ConnectionStrings__searchdb-insights=$(POSTGRES_CONNECTION_STRING)" \
                             "Orleans__ClusterId=insights-cluster" \
                             "Orleans__ServiceId=insights-service" \
-                            "Identity__ClientId=$(IDENTITY_CLIENT_ID)" \
+                            "Identity__ClientId=$(IDENTITY_CLIENT_ID)"
                       fi
 
                 - task: AzureCLI@2
