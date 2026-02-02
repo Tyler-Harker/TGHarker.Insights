@@ -179,13 +179,6 @@ stages:
                       else
                         echo "Updating insights-silo container app..."
 
-                        # Ensure registry is configured with managed identity
-                        az containerapp registry set \
-                          --name insights-silo \
-                          --resource-group $(resourceGroup) \
-                          --server $(acrLoginServer) \
-                          --identity system
-
                         az containerapp update \
                           --name insights-silo \
                           --resource-group $(resourceGroup) \
@@ -196,38 +189,6 @@ stages:
                             "ConnectionStrings__searchdb-insights=$(POSTGRES_CONNECTION_STRING)" \
                             "Orleans__ClusterId=insights-cluster" \
                             "Orleans__ServiceId=insights-service" \
-                          --no-wait
-
-                        # Wait for deployment and check status
-                        echo "Waiting for deployment to complete..."
-                        sleep 30
-
-                        # Get latest revision name
-                        REVISION=$(az containerapp revision list \
-                          --name insights-silo \
-                          --resource-group $(resourceGroup) \
-                          --query "[0].name" -o tsv)
-
-                        echo "Latest revision: $REVISION"
-
-                        # Check revision status
-                        STATUS=$(az containerapp revision show \
-                          --name insights-silo \
-                          --resource-group $(resourceGroup) \
-                          --revision "$REVISION" \
-                          --query "properties.runningState" -o tsv)
-
-                        echo "Revision status: $STATUS"
-
-                        if [ "$STATUS" != "Running" ] && [ "$STATUS" != "Processing" ]; then
-                          echo "ERROR: Revision failed to start. Fetching logs..."
-                          az containerapp logs show \
-                            --name insights-silo \
-                            --resource-group $(resourceGroup) \
-                            --type console \
-                            --tail 100
-                          exit 1
-                        fi
                       fi
 
                 - task: AzureCLI@2
@@ -268,13 +229,6 @@ stages:
                       else
                         echo "Updating insights-web container app..."
 
-                        # Ensure registry is configured with managed identity
-                        az containerapp registry set \
-                          --name insights-web \
-                          --resource-group $(resourceGroup) \
-                          --server $(acrLoginServer) \
-                          --identity system
-
                         az containerapp update \
                           --name insights-web \
                           --resource-group $(resourceGroup) \
@@ -286,38 +240,6 @@ stages:
                             "Orleans__ClusterId=insights-cluster" \
                             "Orleans__ServiceId=insights-service" \
                             "Identity__ClientId=$(IDENTITY_CLIENT_ID)" \
-                          --no-wait
-
-                        # Wait for deployment and check status
-                        echo "Waiting for deployment to complete..."
-                        sleep 30
-
-                        # Get latest revision name
-                        REVISION=$(az containerapp revision list \
-                          --name insights-web \
-                          --resource-group $(resourceGroup) \
-                          --query "[0].name" -o tsv)
-
-                        echo "Latest revision: $REVISION"
-
-                        # Check revision status
-                        STATUS=$(az containerapp revision show \
-                          --name insights-web \
-                          --resource-group $(resourceGroup) \
-                          --revision "$REVISION" \
-                          --query "properties.runningState" -o tsv)
-
-                        echo "Revision status: $STATUS"
-
-                        if [ "$STATUS" != "Running" ] && [ "$STATUS" != "Processing" ]; then
-                          echo "ERROR: Revision failed to start. Fetching logs..."
-                          az containerapp logs show \
-                            --name insights-web \
-                            --resource-group $(resourceGroup) \
-                            --type console \
-                            --tail 100
-                          exit 1
-                        fi
                       fi
 
                 - task: AzureCLI@2
