@@ -24,5 +24,6 @@ public record ConversionRecordData(
     [property: Id(3)] string VisitorId,
     [property: Id(4)] decimal? Value,
     [property: Id(5)] TrafficSource Source,
-    [property: Id(6)] string? UtmCampaign
+    [property: Id(6)] string? UtmCampaign,
+    [property: Id(7)] string OrganizationId
 );

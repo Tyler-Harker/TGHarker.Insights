@@ -36,16 +36,13 @@ public class SourcesModel : DashboardPageModel
             _ => DateTime.UtcNow.Date.AddDays(-30) // default 30d
         };
 
-        // Get sessions
+        // Get sessions - fetch all in parallel
         var sessionGrains = await Client.Search<ISessionGrain>()
             .Where(s => s.ApplicationId == ApplicationId && s.StartedAt >= from && s.StartedAt <= to)
             .ToListAsync();
 
-        var sessionInfos = new List<SessionInfo>();
-        foreach (var grain in sessionGrains)
-        {
-            sessionInfos.Add(await grain.GetInfoAsync());
-        }
+        var sessionInfoTasks = sessionGrains.Select(g => g.GetInfoAsync());
+        var sessionInfos = (await Task.WhenAll(sessionInfoTasks)).ToList();
 
         var totalSessions = sessionInfos.Count;
 

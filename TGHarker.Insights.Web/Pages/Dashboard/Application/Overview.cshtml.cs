@@ -54,16 +54,14 @@ public class OverviewModel : DashboardPageModel
         var allAttributes = await applicationGrain.GetUserAttributesAsync();
         FilterableAttributes = allAttributes.Where(a => a.IsFilterable).ToList();
 
-        // Get all visitors to build unique values per attribute and for filtering
+        // Get visitors with activity in the date range for filtering
         var visitorGrains = await Client.Search<IVisitorGrain>()
-            .Where(v => v.ApplicationId == $"visitor-{ApplicationId}")
+            .Where(v => v.ApplicationId == ApplicationId && v.LastSeen >= from)
             .ToListAsync();
 
-        var visitorInfos = new List<VisitorInfo>();
-        foreach (var grain in visitorGrains)
-        {
-            visitorInfos.Add(await grain.GetInfoAsync());
-        }
+        // Fetch all visitor info in parallel
+        var visitorInfoTasks = visitorGrains.Select(g => g.GetInfoAsync());
+        var visitorInfos = (await Task.WhenAll(visitorInfoTasks)).ToList();
 
         // Build unique values for each filterable attribute
         foreach (var attr in FilterableAttributes)
@@ -87,16 +85,18 @@ public class OverviewModel : DashboardPageModel
                 .ToHashSet();
         }
 
-        // Get metrics
-        var metrics = new List<HourlyMetrics>();
+        // Get metrics - fetch all hourly grains in parallel
+        var hourlyGrainKeys = new List<string>();
         var current = from;
         while (current <= to)
         {
-            var grainKey = $"metrics-hourly-{ApplicationId}-{current:yyyyMMddHH}";
-            var grain = Client.GetGrain<IHourlyMetricsGrain>(grainKey);
-            metrics.Add(await grain.GetMetricsAsync());
+            hourlyGrainKeys.Add($"metrics-hourly-{ApplicationId}-{current:yyyyMMddHH}");
             current = current.AddHours(1);
         }
+
+        var metricsTasks = hourlyGrainKeys.Select(key =>
+            Client.GetGrain<IHourlyMetricsGrain>(key).GetMetricsAsync());
+        var metrics = (await Task.WhenAll(metricsTasks)).ToList();
 
         Metrics = new OverviewMetrics
         {
@@ -121,16 +121,13 @@ public class OverviewModel : DashboardPageModel
         ChartLabels = dailyMetrics.Select(d => d.Date.ToString("MMM d")).ToList();
         ChartData = dailyMetrics.Select(d => d.PageViews).ToList();
 
-        // Top pages
+        // Top pages - fetch all page view info in parallel
         var pageViewGrains = await Client.Search<IPageViewGrain>()
             .Where(pv => pv.ApplicationId == ApplicationId && pv.Timestamp >= from && pv.Timestamp <= to)
             .ToListAsync();
 
-        var pageViewInfos = new List<PageViewInfo>();
-        foreach (var grain in pageViewGrains)
-        {
-            pageViewInfos.Add(await grain.GetInfoAsync());
-        }
+        var pageViewInfoTasks = pageViewGrains.Select(g => g.GetInfoAsync());
+        var pageViewInfos = (await Task.WhenAll(pageViewInfoTasks)).ToList();
 
         // Apply visitor filter to page views if set
         if (filteredVisitorIds != null)
@@ -145,16 +142,13 @@ public class OverviewModel : DashboardPageModel
             .Take(10)
             .ToList();
 
-        // Traffic sources
+        // Traffic sources - fetch all session info in parallel
         var sessionGrains = await Client.Search<ISessionGrain>()
             .Where(s => s.ApplicationId == ApplicationId && s.StartedAt >= from && s.StartedAt <= to)
             .ToListAsync();
 
-        var sessionInfos = new List<SessionInfo>();
-        foreach (var grain in sessionGrains)
-        {
-            sessionInfos.Add(await grain.GetInfoAsync());
-        }
+        var sessionInfoTasks = sessionGrains.Select(g => g.GetInfoAsync());
+        var sessionInfos = (await Task.WhenAll(sessionInfoTasks)).ToList();
 
         // Apply visitor filter to sessions if set
         if (filteredVisitorIds != null)

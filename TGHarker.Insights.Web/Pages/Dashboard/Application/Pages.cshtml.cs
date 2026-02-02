@@ -35,27 +35,21 @@ public class PagesModel : DashboardPageModel
             _ => DateTime.UtcNow.Date.AddDays(-30) // default 30d
         };
 
-        // Get page views
+        // Get page views - fetch all in parallel
         var pageViewGrains = await Client.Search<IPageViewGrain>()
             .Where(pv => pv.ApplicationId == ApplicationId && pv.Timestamp >= from && pv.Timestamp <= to)
             .ToListAsync();
 
-        var pageViewInfos = new List<PageViewInfo>();
-        foreach (var grain in pageViewGrains)
-        {
-            pageViewInfos.Add(await grain.GetInfoAsync());
-        }
+        var pageViewInfoTasks = pageViewGrains.Select(g => g.GetInfoAsync());
+        var pageViewInfos = (await Task.WhenAll(pageViewInfoTasks)).ToList();
 
-        // Get sessions for bounce rate calculation
+        // Get sessions for bounce rate calculation - fetch all in parallel
         var sessionGrains = await Client.Search<ISessionGrain>()
             .Where(s => s.ApplicationId == ApplicationId && s.StartedAt >= from && s.StartedAt <= to)
             .ToListAsync();
 
-        var sessionInfos = new List<SessionInfo>();
-        foreach (var grain in sessionGrains)
-        {
-            sessionInfos.Add(await grain.GetInfoAsync());
-        }
+        var sessionInfoTasks = sessionGrains.Select(g => g.GetInfoAsync());
+        var sessionInfos = (await Task.WhenAll(sessionInfoTasks)).ToList();
 
         var totalSessions = sessionInfos.Count;
         var totalBounces = sessionInfos.Count(s => s.IsBounce);

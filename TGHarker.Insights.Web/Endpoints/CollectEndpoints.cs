@@ -14,23 +14,34 @@ public static class CollectEndpoints
             .WithTags("Collect")
             .AllowAnonymous();
 
-        // Handle CORS preflight for collect endpoints
-        group.MapMethods("/", new[] { "OPTIONS" }, HandleCorsPreflight);
-        group.MapMethods("/batch", new[] { "OPTIONS" }, HandleCorsPreflight);
+        // CORS preflight - validates origin against application's allowed origins
+        group.MapMethods("/{applicationId}", ["OPTIONS"], HandleCorsPreflight);
+        group.MapMethods("/{applicationId}/batch", ["OPTIONS"], HandleCorsPreflight);
 
-        group.MapPost("/", HandleCollect)
+        // Collect endpoints with applicationId in path for proper CORS validation
+        group.MapPost("/{applicationId}", HandleCollect)
             .WithName("Collect");
-
-        group.MapPost("/batch", HandleBatchCollect)
+        group.MapPost("/{applicationId}/batch", HandleBatchCollect)
             .WithName("CollectBatch");
 
         group.MapGet("/config/{applicationId}", HandleGetConfig)
             .WithName("GetCollectConfig");
     }
 
-    private static IResult HandleCorsPreflight(HttpContext context)
+    private static async Task<IResult> HandleCorsPreflight(
+        HttpContext context,
+        string applicationId,
+        IClusterClient client)
     {
-        var origin = context.Request.Headers.Origin.FirstOrDefault();
+        var origin = context.Request.Headers.Origin.FirstOrDefault() ?? "";
+
+        if (string.IsNullOrEmpty(applicationId))
+            return Results.BadRequest("Application ID is required");
+
+        var applicationGrain = client.GetGrain<IApplicationGrain>($"app-{applicationId}");
+        if (!await applicationGrain.ValidateOriginAsync(origin))
+            return Results.StatusCode(403);
+
         if (!string.IsNullOrEmpty(origin))
         {
             context.Response.Headers.AccessControlAllowOrigin = origin;
@@ -43,13 +54,14 @@ public static class CollectEndpoints
 
     private static async Task<IResult> HandleCollect(
         HttpContext context,
+        string applicationId,
         CollectRequest request,
         IClusterClient client,
         ILogger<CollectEndpointHandler> logger)
     {
         var origin = context.Request.Headers.Origin.FirstOrDefault() ?? "";
 
-        var applicationGrain = client.GetGrain<IApplicationGrain>($"app-{request.ApplicationId}");
+        var applicationGrain = client.GetGrain<IApplicationGrain>($"app-{applicationId}");
         if (!await applicationGrain.ValidateOriginAsync(origin))
             return Results.StatusCode(403);
 
@@ -63,12 +75,15 @@ public static class CollectEndpoints
             context.Response.Headers.AccessControlAllowOrigin = origin;
         }
 
-        await ProcessEvent(client, request, organizationId, logger);
+        // Use applicationId from path
+        var requestWithAppId = request with { ApplicationId = applicationId };
+        await ProcessEvent(client, requestWithAppId, organizationId, logger);
         return Results.NoContent();
     }
 
     private static async Task<IResult> HandleBatchCollect(
         HttpContext context,
+        string applicationId,
         CollectBatchRequest request,
         IClusterClient client,
         ILogger<CollectEndpointHandler> logger)
@@ -77,7 +92,6 @@ public static class CollectEndpoints
             return Results.NoContent();
 
         var origin = context.Request.Headers.Origin.FirstOrDefault() ?? "";
-        var applicationId = request.Events.First().ApplicationId;
 
         var applicationGrain = client.GetGrain<IApplicationGrain>($"app-{applicationId}");
         if (!await applicationGrain.ValidateOriginAsync(origin))
@@ -95,7 +109,9 @@ public static class CollectEndpoints
 
         foreach (var evt in request.Events)
         {
-            await ProcessEvent(client, evt, organizationId, logger);
+            // Use applicationId from path
+            var evtWithAppId = evt with { ApplicationId = applicationId };
+            await ProcessEvent(client, evtWithAppId, organizationId, logger);
         }
 
         return Results.NoContent();

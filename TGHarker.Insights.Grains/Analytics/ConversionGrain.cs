@@ -27,6 +27,7 @@ public class ConversionGrain : Grain, IConversionGrain
         {
             Id = this.GetPrimaryKeyString(),
             ApplicationId = data.ApplicationId,
+            OrganizationId = data.OrganizationId,
             GoalId = data.GoalId,
             SessionId = data.SessionId,
             VisitorId = data.VisitorId,

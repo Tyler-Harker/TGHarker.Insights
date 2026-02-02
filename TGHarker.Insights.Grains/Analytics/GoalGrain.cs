@@ -40,6 +40,7 @@ public class GoalGrain : Grain, IGoalGrain
         {
             Id = this.GetPrimaryKeyString(),
             ApplicationId = request.ApplicationId,
+            OrganizationId = request.OrganizationId,
             Name = request.Name,
             Type = request.Type,
             Condition = request.Condition,

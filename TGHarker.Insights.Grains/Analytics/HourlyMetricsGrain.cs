@@ -9,6 +9,7 @@ namespace TGHarker.Insights.Grains.Analytics;
 public class HourlyMetricsGrain : Grain, IHourlyMetricsGrain
 {
     private readonly IPersistentState<HourlyMetricsState> _state;
+    private readonly IGrainFactory _grainFactory;
 
     // Buffered updates to reduce write frequency
     private int _bufferedPageViews;
@@ -20,15 +21,18 @@ public class HourlyMetricsGrain : Grain, IHourlyMetricsGrain
     private readonly HashSet<string> _bufferedVisitorIds = new();
     private bool _isDirty;
     private IGrainTimer? _flushTimer;
+    private bool _organizationIdResolved;
 
     // Use a bloom filter approximation for unique visitors at scale
     // For production, consider using a proper HyperLogLog implementation
     private const int MaxUniqueVisitorIdsToTrack = 10000;
 
     public HourlyMetricsGrain(
-        [PersistentState("hourlymetrics", "Default")] IPersistentState<HourlyMetricsState> state)
+        [PersistentState("hourlymetrics", "Default")] IPersistentState<HourlyMetricsState> state,
+        IGrainFactory grainFactory)
     {
         _state = state;
+        _grainFactory = grainFactory;
     }
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -48,6 +52,8 @@ public class HourlyMetricsGrain : Grain, IHourlyMetricsGrain
             }
         }
 
+        _organizationIdResolved = !string.IsNullOrEmpty(_state.State.OrganizationId);
+
         // Flush buffered updates every 5 seconds to reduce write amplification
         _flushTimer = this.RegisterGrainTimer(
             static (state, _) => state.FlushBufferAsync(),
@@ -61,6 +67,17 @@ public class HourlyMetricsGrain : Grain, IHourlyMetricsGrain
         return base.OnActivateAsync(cancellationToken);
     }
 
+    private async Task EnsureOrganizationIdAsync()
+    {
+        if (_organizationIdResolved)
+            return;
+
+        var applicationGrain = _grainFactory.GetGrain<IApplicationGrain>($"app-{_state.State.ApplicationId}");
+        var appInfo = await applicationGrain.GetInfoAsync();
+        _state.State.OrganizationId = appInfo.OrganizationId;
+        _organizationIdResolved = true;
+    }
+
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         _flushTimer?.Dispose();
@@ -72,6 +89,8 @@ public class HourlyMetricsGrain : Grain, IHourlyMetricsGrain
     {
         if (!_isDirty)
             return;
+
+        await EnsureOrganizationIdAsync();
 
         _state.State.PageViews += _bufferedPageViews;
         _state.State.Sessions += _bufferedSessions;
@@ -162,6 +181,8 @@ public class HourlyMetricsGrain : Grain, IHourlyMetricsGrain
 
     public async Task IncrementConversionsAsync(string goalId, decimal? value)
     {
+        await EnsureOrganizationIdAsync();
+
         // Conversions are important - write immediately
         _state.State.Conversions++;
         _state.State.ConversionValue += value ?? 0;

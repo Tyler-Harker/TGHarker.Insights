@@ -28,7 +28,8 @@ public class ApplicationGrain : Grain, IApplicationGrain
             state.CreatedAt,
             state.IsActive,
             state.Settings,
-            state.OrganizationId
+            state.OrganizationId,
+            state.AllowedOrigins.ToList()
         ));
     }
 

@@ -45,23 +45,21 @@ public class ConversionsModel : DashboardPageModel
             .ToListAsync();
         var totalSessions = sessionGrains.Count;
 
-        // Get goals for this property
+        // Get goals for this property - fetch all in parallel
         var goalGrains = await Client.Search<IGoalGrain>()
             .Where(g => g.ApplicationId == ApplicationId)
             .ToListAsync();
 
-        foreach (var goalGrain in goalGrains)
-        {
-            var goalInfo = await goalGrain.GetInfoAsync();
+        var goalInfoTasks = goalGrains.Select(g => g.GetInfoAsync());
+        var goalInfos = await Task.WhenAll(goalInfoTasks);
 
-            Goals.Add(new GoalStat
-            {
-                Name = goalInfo.Name,
-                Type = goalInfo.Type.ToString(),
-                Conversions = goalInfo.TotalConversions,
-                ConversionRate = totalSessions > 0 ? (double)goalInfo.TotalConversions / totalSessions * 100 : 0
-            });
-        }
+        Goals = goalInfos.Select(goalInfo => new GoalStat
+        {
+            Name = goalInfo.Name,
+            Type = goalInfo.Type.ToString(),
+            Conversions = goalInfo.TotalConversions,
+            ConversionRate = totalSessions > 0 ? (double)goalInfo.TotalConversions / totalSessions * 100 : 0
+        }).ToList();
 
         TotalConversions = Goals.Sum(g => g.Conversions);
         OverallConversionRate = totalSessions > 0 ? (double)TotalConversions / totalSessions * 100 : 0;
@@ -101,7 +99,8 @@ public class ConversionsModel : DashboardPageModel
             Name: goalName,
             Type: type,
             Condition: condition,
-            MonetaryValue: null
+            MonetaryValue: null,
+            OrganizationId: property.OrganizationId
         ));
 
         return RedirectToPage(new { applicationId = ApplicationId });

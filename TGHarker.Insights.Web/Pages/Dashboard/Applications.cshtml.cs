@@ -41,11 +41,9 @@ public class ApplicationsModel : PageModel
             .Where(p => p.OrganizationId == organizationId)
             .ToListAsync();
 
-        var allApps = new List<ApplicationInfo>();
-        foreach (var grain in grains)
-        {
-            allApps.Add(await grain.GetInfoAsync());
-        }
+        // Fetch all application info in parallel
+        var infoTasks = grains.Select(g => g.GetInfoAsync());
+        var allApps = (await Task.WhenAll(infoTasks)).ToList();
 
         // Apply search filter
         if (!string.IsNullOrEmpty(Search))

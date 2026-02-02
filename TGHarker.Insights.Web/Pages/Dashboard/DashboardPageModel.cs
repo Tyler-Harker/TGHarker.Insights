@@ -46,10 +46,10 @@ public abstract class DashboardPageModel : PageModel
             .Where(p => p.OrganizationId == organizationId)
             .ToListAsync();
 
-        foreach (var grain in grains)
-        {
-            AllApplications.Add(await grain.GetInfoAsync());
-        }
+        // Fetch all application info in parallel
+        var infoTasks = grains.Select(g => g.GetInfoAsync());
+        var infos = await Task.WhenAll(infoTasks);
+        AllApplications.AddRange(infos);
 
         return null;
     }

@@ -29,12 +29,13 @@ public class FunnelGrain : Grain, IFunnelGrain
         ));
     }
 
-    public async Task CreateAsync(string applicationId, CreateFunnelRequest request)
+    public async Task CreateAsync(string applicationId, string organizationId, CreateFunnelRequest request)
     {
         _state.State = new FunnelState
         {
             Id = this.GetPrimaryKeyString(),
             ApplicationId = applicationId,
+            OrganizationId = organizationId,
             Name = request.Name,
             Steps = request.Steps,
             CreatedAt = DateTime.UtcNow,

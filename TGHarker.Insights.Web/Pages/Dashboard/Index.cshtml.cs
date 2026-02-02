@@ -39,15 +39,13 @@ public class IndexModel : PageModel
 
         OrganizationName = GetOrganizationName();
 
-        // Load all applications for the organization
+        // Load all applications for the organization - fetch all in parallel
         var grains = await _client.Search<IApplicationGrain>()
             .Where(p => p.OrganizationId == organizationId)
             .ToListAsync();
 
-        foreach (var grain in grains)
-        {
-            Applications.Add(await grain.GetInfoAsync());
-        }
+        var appInfoTasks = grains.Select(g => g.GetInfoAsync());
+        Applications = (await Task.WhenAll(appInfoTasks)).ToList();
 
         if (!Applications.Any())
             return;
@@ -61,29 +59,42 @@ public class IndexModel : PageModel
             _ => DateTime.UtcNow.Date.AddDays(-30)
         };
 
-        // Aggregate metrics across all applications
-        var allMetrics = new List<HourlyMetrics>();
-        var appMetrics = new Dictionary<string, (ApplicationInfo App, int PageViews, int Sessions)>();
+        // Build list of all hourly grain keys for all applications
+        var hourlyGrainTasks = new List<(string AppId, Task<HourlyMetrics> Task)>();
 
         foreach (var app in Applications)
         {
             var appId = app.Id.StartsWith("app-") ? app.Id[4..] : app.Id;
             var current = from;
-            var appPageViews = 0;
-            var appSessions = 0;
 
             while (current <= to)
             {
                 var grainKey = $"metrics-hourly-{appId}-{current:yyyyMMddHH}";
-                var grain = _client.GetGrain<IHourlyMetricsGrain>(grainKey);
-                var metrics = await grain.GetMetricsAsync();
-                allMetrics.Add(metrics);
-                appPageViews += metrics.PageViews;
-                appSessions += metrics.Sessions;
+                var task = _client.GetGrain<IHourlyMetricsGrain>(grainKey).GetMetricsAsync();
+                hourlyGrainTasks.Add((app.Id, task));
                 current = current.AddHours(1);
             }
+        }
 
-            appMetrics[app.Id] = (app, appPageViews, appSessions);
+        // Fetch all hourly metrics in parallel
+        await Task.WhenAll(hourlyGrainTasks.Select(t => t.Task));
+
+        // Group results by application
+        var allMetrics = new List<HourlyMetrics>();
+        var appMetrics = new Dictionary<string, (ApplicationInfo App, int PageViews, int Sessions)>();
+
+        foreach (var app in Applications)
+        {
+            appMetrics[app.Id] = (app, 0, 0);
+        }
+
+        foreach (var (appId, task) in hourlyGrainTasks)
+        {
+            var metrics = await task; // Already completed
+            allMetrics.Add(metrics);
+
+            var current = appMetrics[appId];
+            appMetrics[appId] = (current.App, current.PageViews + metrics.PageViews, current.Sessions + metrics.Sessions);
         }
 
         // Calculate aggregate metrics

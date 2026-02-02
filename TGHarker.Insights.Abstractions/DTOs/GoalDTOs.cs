@@ -23,7 +23,8 @@ public record CreateGoalRequest(
     [property: Id(1)] string Name,
     [property: Id(2)] GoalType Type,
     [property: Id(3)] GoalCondition Condition,
-    [property: Id(4)] decimal? MonetaryValue
+    [property: Id(4)] decimal? MonetaryValue,
+    [property: Id(5)] string OrganizationId
 );
 
 [GenerateSerializer]

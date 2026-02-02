@@ -13,7 +13,8 @@ public record ApplicationInfo(
     [property: Id(5)] DateTime CreatedAt,
     [property: Id(6)] bool IsActive,
     [property: Id(7)] ApplicationSettings Settings,
-    [property: Id(8)] string OrganizationId
+    [property: Id(8)] string OrganizationId,
+    [property: Id(9)] List<string> AllowedOrigins
 );
 
 [GenerateSerializer]

@@ -15,6 +15,7 @@ public class SettingsModel : DashboardPageModel
 
     public string BaseUrl => $"{Request.Scheme}://{Request.Host}";
     public List<UserAttributeDefinition> UserAttributes { get; set; } = [];
+    public List<string> AllowedOrigins { get; set; } = [];
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -26,6 +27,7 @@ public class SettingsModel : DashboardPageModel
 
         var propertyGrain = Client.GetGrain<IApplicationGrain>($"app-{ApplicationId}");
         UserAttributes = await propertyGrain.GetUserAttributesAsync();
+        AllowedOrigins = await propertyGrain.GetAllowedOriginsAsync();
 
         return Page();
     }
@@ -82,6 +84,52 @@ public class SettingsModel : DashboardPageModel
             return Forbid();
 
         await propertyGrain.SetUserAttributeFilterableAsync(attributeKey, isFilterable);
+
+        return RedirectToPage(new { applicationId = ApplicationId });
+    }
+
+    public async Task<IActionResult> OnPostAddOriginAsync(string origin)
+    {
+        var userId = GetUserId();
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(origin))
+            return RedirectToPage(new { applicationId = ApplicationId });
+
+        var propertyGrain = Client.GetGrain<IApplicationGrain>($"app-{ApplicationId}");
+        var property = await propertyGrain.GetInfoAsync();
+
+        if (string.IsNullOrEmpty(property.Id) || property.OwnerId != userId)
+            return Forbid();
+
+        var origins = await propertyGrain.GetAllowedOriginsAsync();
+        var trimmedOrigin = origin.Trim();
+
+        if (!origins.Contains(trimmedOrigin, StringComparer.OrdinalIgnoreCase))
+        {
+            origins.Add(trimmedOrigin);
+            await propertyGrain.SetAllowedOriginsAsync(origins);
+        }
+
+        return RedirectToPage(new { applicationId = ApplicationId });
+    }
+
+    public async Task<IActionResult> OnPostRemoveOriginAsync(string origin)
+    {
+        var userId = GetUserId();
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var propertyGrain = Client.GetGrain<IApplicationGrain>($"app-{ApplicationId}");
+        var property = await propertyGrain.GetInfoAsync();
+
+        if (string.IsNullOrEmpty(property.Id) || property.OwnerId != userId)
+            return Forbid();
+
+        var origins = await propertyGrain.GetAllowedOriginsAsync();
+        origins.RemoveAll(o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase));
+        await propertyGrain.SetAllowedOriginsAsync(origins);
 
         return RedirectToPage(new { applicationId = ApplicationId });
     }

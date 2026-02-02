@@ -9,11 +9,15 @@ namespace TGHarker.Insights.Grains.Analytics;
 public class RetentionCohortGrain : Grain, IRetentionCohortGrain
 {
     private readonly IPersistentState<RetentionCohortState> _state;
+    private readonly IGrainFactory _grainFactory;
+    private bool _organizationIdResolved;
 
     public RetentionCohortGrain(
-        [PersistentState("retentioncohort", "Default")] IPersistentState<RetentionCohortState> state)
+        [PersistentState("retentioncohort", "Default")] IPersistentState<RetentionCohortState> state,
+        IGrainFactory grainFactory)
     {
         _state = state;
+        _grainFactory = grainFactory;
     }
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -28,13 +32,27 @@ public class RetentionCohortGrain : Grain, IRetentionCohortGrain
             _state.State.CohortWeek = parts.Last();
         }
 
+        _organizationIdResolved = !string.IsNullOrEmpty(_state.State.OrganizationId);
+
         return base.OnActivateAsync(cancellationToken);
+    }
+
+    private async Task EnsureOrganizationIdAsync()
+    {
+        if (_organizationIdResolved)
+            return;
+
+        var applicationGrain = _grainFactory.GetGrain<IApplicationGrain>($"app-{_state.State.ApplicationId}");
+        var appInfo = await applicationGrain.GetInfoAsync();
+        _state.State.OrganizationId = appInfo.OrganizationId;
+        _organizationIdResolved = true;
     }
 
     public async Task AddVisitorAsync(string visitorId)
     {
         if (_state.State.VisitorIds.Add(visitorId))
         {
+            await EnsureOrganizationIdAsync();
             _state.State.TotalVisitors++;
             await _state.WriteStateAsync();
         }
@@ -53,6 +71,7 @@ public class RetentionCohortGrain : Grain, IRetentionCohortGrain
 
         if (visitors.Add(visitorId))
         {
+            await EnsureOrganizationIdAsync();
             await _state.WriteStateAsync();
         }
     }

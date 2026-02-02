@@ -38,16 +38,13 @@ public class EventsModel : DashboardPageModel
             _ => DateTime.UtcNow.Date.AddDays(-30) // default 30d
         };
 
-        // Get events
+        // Get events - fetch all in parallel
         var eventGrains = await Client.Search<IEventGrain>()
             .Where(e => e.ApplicationId == ApplicationId && e.Timestamp >= from && e.Timestamp <= to)
             .ToListAsync();
 
-        var eventInfos = new List<EventInfo>();
-        foreach (var grain in eventGrains)
-        {
-            eventInfos.Add(await grain.GetInfoAsync());
-        }
+        var eventInfoTasks = eventGrains.Select(g => g.GetInfoAsync());
+        var eventInfos = (await Task.WhenAll(eventInfoTasks)).ToList();
 
         TotalEvents = eventInfos.Count;
         UniqueEventNames = eventInfos.Select(e => $"{e.Category}:{e.Action}").Distinct().Count();

@@ -34,19 +34,14 @@ public class FunnelsModel : DashboardPageModel
         if (result != null)
             return result;
 
-        // Load all funnels for this application
+        // Load all funnels for this application - fetch all in parallel
         var funnelGrains = await Client.Search<IFunnelGrain>()
             .Where(f => f.ApplicationId == ApplicationId && f.IsActive == true)
             .ToListAsync();
 
-        foreach (var grain in funnelGrains)
-        {
-            var info = await grain.GetInfoAsync();
-            if (!string.IsNullOrEmpty(info.Id))
-            {
-                Funnels.Add(info);
-            }
-        }
+        var funnelInfoTasks = funnelGrains.Select(g => g.GetInfoAsync());
+        var funnelInfos = await Task.WhenAll(funnelInfoTasks);
+        Funnels = funnelInfos.Where(info => !string.IsNullOrEmpty(info.Id)).ToList();
 
         // Calculate analytics for each funnel
         var to = DateTime.UtcNow;
@@ -75,6 +70,11 @@ public class FunnelsModel : DashboardPageModel
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
+        var applicationGrain = Client.GetGrain<IApplicationGrain>($"app-{ApplicationId}");
+        var appInfo = await applicationGrain.GetInfoAsync();
+        if (string.IsNullOrEmpty(appInfo.Id))
+            return Forbid();
+
         var steps = System.Text.Json.JsonSerializer.Deserialize<List<FunnelStep>>(stepsJson,
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
@@ -91,7 +91,7 @@ public class FunnelsModel : DashboardPageModel
 
         var funnelId = Guid.NewGuid().ToString("N");
         var funnelGrain = Client.GetGrain<IFunnelGrain>($"funnel-{ApplicationId}-{funnelId}");
-        await funnelGrain.CreateAsync(ApplicationId, new CreateFunnelRequest(funnelName, steps));
+        await funnelGrain.CreateAsync(ApplicationId, appInfo.OrganizationId, new CreateFunnelRequest(funnelName, steps));
 
         return RedirectToPage(new { applicationId = ApplicationId });
     }
@@ -131,29 +131,23 @@ public class FunnelsModel : DashboardPageModel
     {
         const int maxRecords = 10000; // Limit records to prevent memory issues
 
-        // Get limited page views for this application
+        // Get limited page views for this application - fetch all in parallel
         var pageViewGrains = await Client.Search<IPageViewGrain>()
             .Where(pv => pv.ApplicationId == ApplicationId && pv.Timestamp >= from && pv.Timestamp <= to)
             .Take(maxRecords)
             .ToListAsync();
 
-        var pageViewInfos = new List<PageViewInfo>();
-        foreach (var grain in pageViewGrains.Take(maxRecords))
-        {
-            pageViewInfos.Add(await grain.GetInfoAsync());
-        }
+        var pageViewInfoTasks = pageViewGrains.Select(g => g.GetInfoAsync());
+        var pageViewInfos = (await Task.WhenAll(pageViewInfoTasks)).ToList();
 
-        // Get limited events for this application
+        // Get limited events for this application - fetch all in parallel
         var eventGrains = await Client.Search<IEventGrain>()
             .Where(e => e.ApplicationId == ApplicationId && e.Timestamp >= from && e.Timestamp <= to)
             .Take(maxRecords)
             .ToListAsync();
 
-        var eventInfos = new List<EventInfo>();
-        foreach (var grain in eventGrains.Take(maxRecords))
-        {
-            eventInfos.Add(await grain.GetInfoAsync());
-        }
+        var eventInfoTasks = eventGrains.Select(g => g.GetInfoAsync());
+        var eventInfos = (await Task.WhenAll(eventInfoTasks)).ToList();
 
         // Group data by visitor
         var pageViewsByVisitor = pageViewInfos.GroupBy(pv => pv.VisitorId).ToDictionary(g => g.Key, g => g.OrderBy(pv => pv.Timestamp).ToList());
@@ -244,35 +238,35 @@ public class FunnelsModel : DashboardPageModel
     {
         const int maxSamples = 5000;
 
-        // Load unique page paths
+        // Load unique page paths - fetch all in parallel
         var pageViewGrains = await Client.Search<IPageViewGrain>()
             .Where(pv => pv.ApplicationId == ApplicationId && pv.Timestamp >= from && pv.Timestamp <= to)
             .Take(maxSamples)
             .ToListAsync();
 
-        var routes = new HashSet<string>();
-        foreach (var grain in pageViewGrains)
-        {
-            var info = await grain.GetInfoAsync();
-            if (!string.IsNullOrEmpty(info.PagePath))
-            {
-                routes.Add(info.PagePath);
-            }
-        }
+        var pageViewInfoTasks = pageViewGrains.Select(g => g.GetInfoAsync());
+        var pageViewInfos = await Task.WhenAll(pageViewInfoTasks);
+
+        var routes = pageViewInfos
+            .Where(info => !string.IsNullOrEmpty(info.PagePath))
+            .Select(info => info.PagePath)
+            .ToHashSet();
         AvailableRoutes = routes.OrderBy(r => r).ToList();
 
-        // Load unique event categories and actions
+        // Load unique event categories and actions - fetch all in parallel
         var eventGrains = await Client.Search<IEventGrain>()
             .Where(e => e.ApplicationId == ApplicationId && e.Timestamp >= from && e.Timestamp <= to)
             .Take(maxSamples)
             .ToListAsync();
 
+        var eventInfoTasks = eventGrains.Select(g => g.GetInfoAsync());
+        var eventInfos = await Task.WhenAll(eventInfoTasks);
+
         var categories = new HashSet<string>();
         var actionsByCategory = new Dictionary<string, HashSet<string>>();
 
-        foreach (var grain in eventGrains)
+        foreach (var info in eventInfos)
         {
-            var info = await grain.GetInfoAsync();
             if (!string.IsNullOrEmpty(info.Category))
             {
                 categories.Add(info.Category);

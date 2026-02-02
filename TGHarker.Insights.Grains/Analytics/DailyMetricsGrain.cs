@@ -9,11 +9,15 @@ namespace TGHarker.Insights.Grains.Analytics;
 public class DailyMetricsGrain : Grain, IDailyMetricsGrain
 {
     private readonly IPersistentState<DailyMetricsState> _state;
+    private readonly IGrainFactory _grainFactory;
+    private bool _organizationIdResolved;
 
     public DailyMetricsGrain(
-        [PersistentState("dailymetrics", "Default")] IPersistentState<DailyMetricsState> state)
+        [PersistentState("dailymetrics", "Default")] IPersistentState<DailyMetricsState> state,
+        IGrainFactory grainFactory)
     {
         _state = state;
+        _grainFactory = grainFactory;
     }
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -33,11 +37,26 @@ public class DailyMetricsGrain : Grain, IDailyMetricsGrain
             }
         }
 
+        _organizationIdResolved = !string.IsNullOrEmpty(_state.State.OrganizationId);
+
         return base.OnActivateAsync(cancellationToken);
+    }
+
+    private async Task EnsureOrganizationIdAsync()
+    {
+        if (_organizationIdResolved)
+            return;
+
+        var applicationGrain = _grainFactory.GetGrain<IApplicationGrain>($"app-{_state.State.ApplicationId}");
+        var appInfo = await applicationGrain.GetInfoAsync();
+        _state.State.OrganizationId = appInfo.OrganizationId;
+        _organizationIdResolved = true;
     }
 
     public async Task AggregateFromHourlyAsync(HourlyMetrics hourlyMetrics)
     {
+        await EnsureOrganizationIdAsync();
+
         _state.State.PageViews += hourlyMetrics.PageViews;
         _state.State.Sessions += hourlyMetrics.Sessions;
         _state.State.Events += hourlyMetrics.Events;

@@ -26,12 +26,17 @@
             var scriptConfig = this._getScriptTagConfig();
 
             var applicationId = config.applicationId || scriptConfig.applicationId;
-            var endpoint = config.endpoint || scriptConfig.endpoint || '/api/collect';
             var debug = config.debug || scriptConfig.debug || false;
 
             if (!applicationId) {
                 console.error('[Insights] applicationId is required. Set data-application on the script tag or pass it to init()');
                 return;
+            }
+
+            // Build endpoint with applicationId in path for proper CORS validation
+            var endpoint = config.endpoint || scriptConfig.endpoint;
+            if (!endpoint) {
+                endpoint = '/api/collect/' + applicationId;
             }
 
             this._applicationId = applicationId;
@@ -313,22 +318,26 @@
                 return {};
             }
 
-            // Infer endpoint from script src URL
+            var applicationId = this._scriptTag.getAttribute('data-application');
+
+            // Infer endpoint from script src URL - include applicationId in path for CORS validation
             var endpoint = this._scriptTag.getAttribute('data-endpoint');
-            if (!endpoint) {
+            if (!endpoint && applicationId) {
                 var src = this._scriptTag.getAttribute('src');
                 if (src) {
                     try {
                         var url = new URL(src, window.location.origin);
-                        endpoint = url.origin + '/api/collect';
+                        endpoint = url.origin + '/api/collect/' + applicationId;
                     } catch (e) {
-                        endpoint = '/api/collect';
+                        endpoint = '/api/collect/' + applicationId;
                     }
+                } else {
+                    endpoint = '/api/collect/' + applicationId;
                 }
             }
 
             return {
-                applicationId: this._scriptTag.getAttribute('data-application'),
+                applicationId: applicationId,
                 endpoint: endpoint,
                 debug: this._scriptTag.getAttribute('data-debug') === 'true'
             };

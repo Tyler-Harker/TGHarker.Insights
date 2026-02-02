@@ -30,7 +30,7 @@
     <h6 class="mb-3"><i class="bi bi-code-slash me-2"></i>Tracking Code</h6>
     <p class="text-muted small mb-3">Add this script tag to your website's <code>&lt;head&gt;</code> section to start collecting analytics data. The script is lightweight and won't affect your site's performance.</p>
     <div class="bg-light rounded p-3 font-monospace" style="font-size: 0.8125rem;">
-        <code id="trackingCode">&lt;script src="@Model.BaseUrl/sdk/insights.js" data-application="@Model.ApplicationId"&gt;&lt;/script&gt;</code>
+        <code id="trackingCode">&lt;script src="@Model.BaseUrl/sdk/insights.js" data-application="@Model.ApplicationId" insights-target&gt;&lt;/script&gt;</code>
     </div>
     <button class="btn btn-outline-secondary btn-sm mt-2" onclick="copyTrackingCode()">
         <i class="bi bi-clipboard me-1"></i>Copy Code
@@ -43,6 +43,46 @@
     <div class="bg-light rounded p-3 font-monospace" style="font-size: 0.875rem;">
         <code>@Model.ApplicationId</code>
     </div>
+</div>
+
+<div class="chart-container mb-4">
+    <h6 class="mb-3"><i class="bi bi-globe me-2"></i>Allowed Origins</h6>
+    <p class="text-muted small mb-3">
+        Configure which domains can send analytics data. The SDK validates requests based on the origin header.
+        Use wildcards like <code>*.example.com</code> to allow all subdomains. Leave empty to allow any origin.
+    </p>
+
+    @if (Model.AllowedOrigins.Any())
+    {
+        <div class="mb-3">
+            @foreach (var origin in Model.AllowedOrigins)
+            {
+                <div class="d-inline-flex align-items-center bg-light rounded px-2 py-1 me-2 mb-2">
+                    <code class="me-2">@origin</code>
+                    <form method="post" asp-page-handler="RemoveOrigin" class="d-inline">
+                        <input type="hidden" name="origin" value="@origin" />
+                        <button type="submit" class="btn btn-link btn-sm p-0 text-danger" title="Remove">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </form>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            No allowed origins configured. All origins are currently allowed. Add specific domains to restrict access.
+        </div>
+    }
+
+    <form method="post" asp-page-handler="AddOrigin" class="d-flex gap-2">
+        <input type="text" class="form-control" name="origin" placeholder="https://example.com or *.example.com" style="max-width: 400px;">
+        <button type="submit" class="btn btn-outline-primary">
+            <i class="bi bi-plus-lg me-1"></i>Add Origin
+        </button>
+    </form>
 </div>
 
 <div class="chart-container mb-4">
