@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
 WORKDIR /src
 
 # Copy solution and project files
-COPY TGHarker.Insights.sln ./
+COPY TGHarker.Insights.slnx ./
 COPY TGHarker.Insights.Silo/TGHarker.Insights.Silo.csproj TGHarker.Insights.Silo/
 COPY TGHarker.Insights.Grains/TGHarker.Insights.Grains.csproj TGHarker.Insights.Grains/
 COPY TGHarker.Insights.Abstractions/TGHarker.Insights.Abstractions.csproj TGHarker.Insights.Abstractions/
