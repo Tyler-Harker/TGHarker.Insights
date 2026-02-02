@@ -143,44 +143,6 @@ stages:
             deploy:
               steps:
                 - task: AzureCLI@2
-                  displayName: 'Grant ACR Pull Access to Container Apps'
-                  inputs:
-                    azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
-                    scriptType: 'bash'
-                    scriptLocation: 'inlineScript'
-                    inlineScript: |
-                      # Get ACR resource ID
-                      ACR_ID=$(az acr show --name $(acrName) --query id -o tsv)
-
-                      # Grant AcrPull role to insights-silo managed identity (if it exists)
-                      SILO_IDENTITY=$(az containerapp show \
-                        --name insights-silo \
-                        --resource-group $(resourceGroup) \
-                        --query "identity.principalId" -o tsv 2>/dev/null || echo "")
-
-                      if [ -n "$SILO_IDENTITY" ]; then
-                        echo "Granting AcrPull to insights-silo identity..."
-                        az role assignment create \
-                          --assignee "$SILO_IDENTITY" \
-                          --role AcrPull \
-                          --scope "$ACR_ID" 2>/dev/null || echo "Role may already exist"
-                      fi
-
-                      # Grant AcrPull role to insights-web managed identity (if it exists)
-                      WEB_IDENTITY=$(az containerapp show \
-                        --name insights-web \
-                        --resource-group $(resourceGroup) \
-                        --query "identity.principalId" -o tsv 2>/dev/null || echo "")
-
-                      if [ -n "$WEB_IDENTITY" ]; then
-                        echo "Granting AcrPull to insights-web identity..."
-                        az role assignment create \
-                          --assignee "$WEB_IDENTITY" \
-                          --role AcrPull \
-                          --scope "$ACR_ID" 2>/dev/null || echo "Role may already exist"
-                      fi
-
-                - task: AzureCLI@2
                   displayName: 'Deploy Insights Silo'
                   inputs:
                     azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
@@ -233,7 +195,39 @@ stages:
                             "ConnectionStrings__AzureStorage=$(STORAGE_CONNECTION_STRING)" \
                             "ConnectionStrings__searchdb-insights=$(POSTGRES_CONNECTION_STRING)" \
                             "Orleans__ClusterId=insights-cluster" \
-                            "Orleans__ServiceId=insights-service"
+                            "Orleans__ServiceId=insights-service" \
+                          --no-wait
+
+                        # Wait for deployment and check status
+                        echo "Waiting for deployment to complete..."
+                        sleep 30
+
+                        # Get latest revision name
+                        REVISION=$(az containerapp revision list \
+                          --name insights-silo \
+                          --resource-group $(resourceGroup) \
+                          --query "[0].name" -o tsv)
+
+                        echo "Latest revision: $REVISION"
+
+                        # Check revision status
+                        STATUS=$(az containerapp revision show \
+                          --name insights-silo \
+                          --resource-group $(resourceGroup) \
+                          --revision "$REVISION" \
+                          --query "properties.runningState" -o tsv)
+
+                        echo "Revision status: $STATUS"
+
+                        if [ "$STATUS" != "Running" ] && [ "$STATUS" != "Processing" ]; then
+                          echo "ERROR: Revision failed to start. Fetching logs..."
+                          az containerapp logs show \
+                            --name insights-silo \
+                            --resource-group $(resourceGroup) \
+                            --type console \
+                            --tail 100
+                          exit 1
+                        fi
                       fi
 
                 - task: AzureCLI@2
@@ -291,7 +285,39 @@ stages:
                             "ConnectionStrings__searchdb-insights=$(POSTGRES_CONNECTION_STRING)" \
                             "Orleans__ClusterId=insights-cluster" \
                             "Orleans__ServiceId=insights-service" \
-                            "Identity__ClientId=$(IDENTITY_CLIENT_ID)"
+                            "Identity__ClientId=$(IDENTITY_CLIENT_ID)" \
+                          --no-wait
+
+                        # Wait for deployment and check status
+                        echo "Waiting for deployment to complete..."
+                        sleep 30
+
+                        # Get latest revision name
+                        REVISION=$(az containerapp revision list \
+                          --name insights-web \
+                          --resource-group $(resourceGroup) \
+                          --query "[0].name" -o tsv)
+
+                        echo "Latest revision: $REVISION"
+
+                        # Check revision status
+                        STATUS=$(az containerapp revision show \
+                          --name insights-web \
+                          --resource-group $(resourceGroup) \
+                          --revision "$REVISION" \
+                          --query "properties.runningState" -o tsv)
+
+                        echo "Revision status: $STATUS"
+
+                        if [ "$STATUS" != "Running" ] && [ "$STATUS" != "Processing" ]; then
+                          echo "ERROR: Revision failed to start. Fetching logs..."
+                          az containerapp logs show \
+                            --name insights-web \
+                            --resource-group $(resourceGroup) \
+                            --type console \
+                            --tail 100
+                          exit 1
+                        fi
                       fi
 
                 - task: AzureCLI@2
