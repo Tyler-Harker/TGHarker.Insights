@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -34,6 +35,10 @@ public class NewModel : PageModel
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
+        var organizationId = GetOrganizationId();
+        if (string.IsNullOrEmpty(organizationId))
+            return Forbid();
+
         if (string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(Domain))
         {
             ModelState.AddModelError(string.Empty, "Name and Domain are required.");
@@ -43,8 +48,25 @@ public class NewModel : PageModel
         var applicationId = Guid.NewGuid().ToString("N")[..12];
         var grain = _client.GetGrain<IApplicationGrain>($"app-{applicationId}");
 
-        await grain.CreateAsync(new CreateApplicationRequest(Name, userId, Domain));
+        await grain.CreateAsync(new CreateApplicationRequest(Name, userId, Domain, organizationId));
 
         return RedirectToPage("/Dashboard/Application/Overview", new { applicationId });
+    }
+
+    private string? GetOrganizationId()
+    {
+        var orgClaim = User.FindFirst("organization")?.Value;
+        if (string.IsNullOrEmpty(orgClaim))
+            return null;
+
+        try
+        {
+            var doc = JsonDocument.Parse(orgClaim);
+            if (doc.RootElement.TryGetProperty("id", out var idProp))
+                return idProp.GetString();
+        }
+        catch { }
+
+        return null;
     }
 }

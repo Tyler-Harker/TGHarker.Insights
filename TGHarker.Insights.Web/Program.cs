@@ -60,15 +60,28 @@ builder.Services.AddAuthentication(options =>
 })
 .AddOpenIdConnect(options =>
 {
-    options.Authority = "https://identity.harker.dev/tenant/harker";
+    options.Authority = builder.Configuration["Identity:Authority"] ?? "https://identity.harker.dev/tenant/harker";
     options.ClientId = builder.Configuration["Identity:ClientId"] ?? "insights";
-    // options.ClientSecret = builder.Configuration["Identity:ClientSecret"];
     options.ResponseType = "code";
     options.SaveTokens = true;
     options.GetClaimsFromUserInfoEndpoint = false;
     options.Scope.Add("openid");
     options.Scope.Add("profile");
     options.Scope.Add("email");
+
+    // Map organization claims from ID token
+    options.ClaimActions.MapJsonKey("organizations", "organizations");
+    options.ClaimActions.MapJsonKey("organization", "organization");
+
+    // Pass organization_id to authorize endpoint when switching orgs
+    options.Events.OnRedirectToIdentityProvider = context =>
+    {
+        if (context.Properties.Items.TryGetValue("organization_id", out var orgId))
+        {
+            context.ProtocolMessage.SetParameter("organization_id", orgId);
+        }
+        return Task.CompletedTask;
+    };
 });
 
 builder.Services.AddAuthorization();
@@ -113,6 +126,18 @@ app.MapGet("/logout", async (HttpContext context) =>
 {
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.Redirect("/");
+});
+
+app.MapGet("/switch-org", async (HttpContext context, string organization_id) =>
+{
+    // Challenge with the new organization_id
+    var properties = new AuthenticationProperties
+    {
+        RedirectUri = "/dashboard",
+        Items = { { "organization_id", organization_id } }
+    };
+
+    return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
 });
 
 app.Run();

@@ -196,8 +196,8 @@
             datasets: [{
                 label: 'Page Views',
                 data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartData)),
-                borderColor: '#38bdf8',
-                backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
                 fill: true,
                 tension: 0.3
             }]
@@ -218,7 +218,7 @@
             labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SourceLabels)),
             datasets: [{
                 data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SourceData)),
-                backgroundColor: ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1', '#075985', '#0c4a6e']
+                backgroundColor: ['#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a', '#172554']
             }]
         },
         options: {

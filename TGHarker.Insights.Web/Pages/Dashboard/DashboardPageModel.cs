@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -29,20 +30,20 @@ public abstract class DashboardPageModel : PageModel
 
     protected async Task<IActionResult?> LoadApplicationDataAsync()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userId))
-            return Unauthorized();
+        var organizationId = GetOrganizationId();
+        if (string.IsNullOrEmpty(organizationId))
+            return Forbid();
 
         // Load current application
         var applicationGrain = Client.GetGrain<IApplicationGrain>($"app-{ApplicationId}");
         Application = await applicationGrain.GetInfoAsync();
 
-        if (string.IsNullOrEmpty(Application.Id) || Application.OwnerId != userId)
+        if (string.IsNullOrEmpty(Application.Id) || Application.OrganizationId != organizationId)
             return Forbid();
 
-        // Load all applications for the switcher
+        // Load all applications for the switcher (scoped to organization)
         var grains = await Client.Search<IApplicationGrain>()
-            .Where(p => p.OwnerId == userId)
+            .Where(p => p.OrganizationId == organizationId)
             .ToListAsync();
 
         foreach (var grain in grains)
@@ -56,5 +57,22 @@ public abstract class DashboardPageModel : PageModel
     protected string? GetUserId()
     {
         return User.FindFirstValue(ClaimTypes.NameIdentifier);
+    }
+
+    protected string? GetOrganizationId()
+    {
+        var orgClaim = User.FindFirst("organization")?.Value;
+        if (string.IsNullOrEmpty(orgClaim))
+            return null;
+
+        try
+        {
+            var doc = JsonDocument.Parse(orgClaim);
+            if (doc.RootElement.TryGetProperty("id", out var idProp))
+                return idProp.GetString();
+        }
+        catch { }
+
+        return null;
     }
 }

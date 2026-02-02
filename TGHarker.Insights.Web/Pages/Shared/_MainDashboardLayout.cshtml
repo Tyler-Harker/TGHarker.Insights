@@ -1,7 +1,42 @@
-@using TGHarker.Insights.Web.Pages.Dashboard
 @inject TGHarker.Insights.Web.Services.ThemeService ThemeService
 @{
-    var model = ViewContext.ViewData.Model as DashboardPageModel;
+    var currentPage = ViewData["CurrentPage"]?.ToString() ?? "";
+
+    // Get organization info
+    var selectedOrgJson = User.FindFirst("organization")?.Value;
+    var orgsJson = User.FindFirst("organizations")?.Value;
+    string? currentOrgId = null;
+    string? currentOrgName = null;
+    var organizations = new List<(string Id, string Name)>();
+
+    if (!string.IsNullOrEmpty(selectedOrgJson))
+    {
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(selectedOrgJson);
+            if (doc.RootElement.TryGetProperty("id", out var idProp))
+                currentOrgId = idProp.GetString();
+            if (doc.RootElement.TryGetProperty("name", out var nameProp))
+                currentOrgName = nameProp.GetString();
+        }
+        catch { }
+    }
+
+    if (!string.IsNullOrEmpty(orgsJson))
+    {
+        try
+        {
+            var arr = System.Text.Json.JsonDocument.Parse(orgsJson).RootElement;
+            foreach (var org in arr.EnumerateArray())
+            {
+                var id = org.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                var name = org.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+                if (id != null && name != null)
+                    organizations.Add((id, name));
+            }
+        }
+        catch { }
+    }
 }
 <!DOCTYPE html>
 <html lang="en" data-theme="@ThemeService.GetTheme()">
@@ -37,7 +72,6 @@
         .page-header h4 {
             margin-bottom: 0.25rem;
         }
-        /* Profile section styles */
         .sidebar-profile {
             border-top: 1px solid var(--border-color);
             background: var(--bg-surface);
@@ -72,40 +106,6 @@
             color: var(--text-muted);
             font-size: 0.75rem;
         }
-        /* App switcher in sidebar */
-        .app-switcher-sidebar {
-            border-color: var(--border-color) !important;
-        }
-        .app-switcher-sidebar .dropdown-menu {
-            max-height: 300px;
-            overflow-y: auto;
-            background: var(--bg-surface);
-            border-color: var(--border-color);
-        }
-        .app-switcher-sidebar .dropdown-item {
-            color: var(--text-primary);
-        }
-        .app-switcher-sidebar .dropdown-item:hover,
-        .app-switcher-sidebar .dropdown-item:focus {
-            background: var(--bg-surface-hover);
-            color: var(--text-primary);
-        }
-        .app-switcher-sidebar .dropdown-item.active {
-            background: var(--primary);
-            color: white;
-        }
-        .app-switcher-sidebar .dropdown-item.active small {
-            color: rgba(255,255,255,0.8) !important;
-        }
-        .app-switcher-sidebar .dropdown-item small {
-            color: var(--text-muted) !important;
-        }
-        .app-switcher-sidebar .dropdown-header {
-            color: var(--text-muted);
-        }
-        .app-switcher-sidebar .dropdown-divider {
-            border-color: var(--border-color);
-        }
     </style>
     @RenderSection("Styles", required: false)
 </head>
@@ -131,10 +131,54 @@
     </nav>
 
     <div class="sidebar">
-        @if (model != null)
-        {
-            <partial name="_DashboardSidebar" model="model" />
-        }
+        <!-- Navigation -->
+        <div class="sidebar-section-title">Dashboard</div>
+        <nav class="sidebar-nav nav flex-column">
+            <a class="nav-link @(currentPage == "overview" ? "active" : "")" href="/dashboard">
+                <i class="bi bi-speedometer2"></i>Overview
+            </a>
+            <a class="nav-link @(currentPage == "applications" ? "active" : "")" href="/dashboard/applications">
+                <i class="bi bi-grid"></i>Applications
+            </a>
+        </nav>
+
+        <!-- Profile Section -->
+        <div class="sidebar-profile mt-auto">
+            <div class="dropup w-100">
+                <button class="btn btn-link text-decoration-none w-100 text-start p-3 d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="profile-avatar">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="profile-name text-truncate">@User.Identity?.Name</div>
+                        <div class="profile-org text-truncate">@(currentOrgName ?? "No Organization")</div>
+                    </div>
+                    <i class="bi bi-chevron-up"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow w-100 mb-2">
+                    <li><h6 class="dropdown-header">Organization</h6></li>
+                    @foreach (var org in organizations)
+                    {
+                        var isActive = org.Id == currentOrgId;
+                        <li>
+                            <a class="dropdown-item d-flex justify-content-between align-items-center @(isActive ? "active" : "")" href="/switch-org?organization_id=@org.Id">
+                                @org.Name
+                                @if (isActive)
+                                {
+                                    <i class="bi bi-check"></i>
+                                }
+                            </a>
+                        </li>
+                    }
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="/logout">
+                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <div class="main-content">
@@ -149,14 +193,11 @@
             const currentTheme = html.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
-            // Update DOM immediately for instant feedback
             html.setAttribute('data-theme', newTheme);
 
-            // Update icons
             document.getElementById('theme-icon-dark').style.display = newTheme === 'dark' ? 'inline' : 'none';
             document.getElementById('theme-icon-light').style.display = newTheme === 'light' ? 'inline' : 'none';
 
-            // Persist to server
             fetch('/api/theme?theme=' + newTheme, { method: 'POST' })
                 .catch(err => console.error('Failed to save theme:', err));
         }

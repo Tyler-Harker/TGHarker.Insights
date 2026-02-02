@@ -106,7 +106,7 @@
                 labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SourceStats.Select(s => s.Source))),
                 datasets: [{
                     data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SourceStats.Select(s => s.Sessions))),
-                    backgroundColor: ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1', '#075985', '#0c4a6e']
+                    backgroundColor: ['#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a', '#172554']
                 }]
             },
             options: {

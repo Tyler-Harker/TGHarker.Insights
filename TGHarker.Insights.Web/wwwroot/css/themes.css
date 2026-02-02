@@ -5,10 +5,10 @@
 [data-theme="dark"] {
     --color-scheme: dark;
 
-    /* Primary colors - Slate blue accent */
-    --primary: #38bdf8;
-    --primary-hover: #7dd3fc;
-    --primary-bg: #334155;
+    /* Primary colors - Blue accent */
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --primary-bg: #1e3a5f;
 
     /* Background colors - Deep slate */
     --bg-body: #0f172a;
@@ -37,7 +37,7 @@
     --sidebar-link: #94a3b8;
     --sidebar-link-hover-bg: #334155;
     --sidebar-link-active-bg: #334155;
-    --sidebar-link-active: #38bdf8;
+    --sidebar-link-active: #3b82f6;
 
     /* Cards */
     --card-bg: #1e293b;
@@ -51,15 +51,15 @@
     /* Form elements */
     --input-bg: #1e293b;
     --input-border: #475569;
-    --input-focus-border: #38bdf8;
+    --input-focus-border: #3b82f6;
 
     /* Alerts/Callouts */
-    --info-callout-bg: rgba(56, 189, 248, 0.1);
-    --info-callout-border: #38bdf8;
+    --info-callout-bg: rgba(59, 130, 246, 0.1);
+    --info-callout-border: #3b82f6;
 
     /* Chart colors */
-    --chart-line: #38bdf8;
-    --chart-fill: rgba(56, 189, 248, 0.2);
+    --chart-line: #3b82f6;
+    --chart-fill: rgba(59, 130, 246, 0.2);
 
     /* Status colors */
     --success: #4ade80;
@@ -68,8 +68,8 @@
     --danger-bg: rgba(248, 113, 113, 0.1);
     --warning: #fbbf24;
     --warning-bg: rgba(251, 191, 36, 0.1);
-    --info: #38bdf8;
-    --info-bg: rgba(56, 189, 248, 0.1);
+    --info: #3b82f6;
+    --info-bg: rgba(59, 130, 246, 0.1);
 
     /* Badges */
     --badge-secondary-bg: #475569;
@@ -89,17 +89,17 @@
 
     /* Code */
     --code-bg: #273549;
-    --code-text: #7dd3fc;
+    --code-text: #93c5fd;
 }
 
 /* Light Theme - Slate */
 [data-theme="light"] {
     --color-scheme: light;
 
-    /* Primary colors - Sky blue accent */
-    --primary: #0284c7;
-    --primary-hover: #0369a1;
-    --primary-bg: #f1f5f9;
+    /* Primary colors - Blue accent */
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-bg: #eff6ff;
 
     /* Background colors - Light slate */
     --bg-body: #f8fafc;
@@ -128,7 +128,7 @@
     --sidebar-link: #475569;
     --sidebar-link-hover-bg: #f1f5f9;
     --sidebar-link-active-bg: #f1f5f9;
-    --sidebar-link-active: #0284c7;
+    --sidebar-link-active: #2563eb;
 
     /* Cards */
     --card-bg: #ffffff;
@@ -142,15 +142,15 @@
     /* Form elements */
     --input-bg: #ffffff;
     --input-border: #cbd5e1;
-    --input-focus-border: #0284c7;
+    --input-focus-border: #2563eb;
 
     /* Alerts/Callouts */
-    --info-callout-bg: rgba(2, 132, 199, 0.1);
-    --info-callout-border: #0284c7;
+    --info-callout-bg: rgba(37, 99, 235, 0.1);
+    --info-callout-border: #2563eb;
 
     /* Chart colors */
-    --chart-line: #0284c7;
-    --chart-fill: rgba(2, 132, 199, 0.1);
+    --chart-line: #2563eb;
+    --chart-fill: rgba(37, 99, 235, 0.1);
 
     /* Status colors */
     --success: #22c55e;
@@ -159,8 +159,8 @@
     --danger-bg: rgba(239, 68, 68, 0.1);
     --warning: #f59e0b;
     --warning-bg: rgba(245, 158, 11, 0.1);
-    --info: #0284c7;
-    --info-bg: rgba(2, 132, 199, 0.1);
+    --info: #2563eb;
+    --info-bg: rgba(37, 99, 235, 0.1);
 
     /* Badges */
     --badge-secondary-bg: #e2e8f0;
@@ -180,7 +180,7 @@
 
     /* Code */
     --code-bg: #f1f5f9;
-    --code-text: #0284c7;
+    --code-text: #2563eb;
 }
 
 /* Apply theme variables */

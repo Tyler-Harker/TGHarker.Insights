@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Insights</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
     <link href="/css/themes.css" rel="stylesheet" />
@@ -13,7 +14,15 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">Insights</a>
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                <svg width="26" height="26" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-top: -4px;">
+                    <rect x="10" y="28" width="10" height="36" rx="3" fill="#3b82f6"/>
+                    <rect x="24" y="20" width="10" height="52" rx="3" fill="#3b82f6"/>
+                    <rect x="46" y="20" width="10" height="52" rx="3" fill="#3b82f6"/>
+                    <rect x="60" y="28" width="10" height="36" rx="3" fill="#3b82f6"/>
+                </svg>
+                Insights
+            </a>
             <div class="d-flex align-items-center gap-3">
                 <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <i class="bi bi-moon-fill" id="theme-icon-dark" style="display: @(ThemeService.IsDarkMode ? "inline" : "none")"></i>
@@ -21,6 +30,63 @@
                 </button>
                 @if (User.Identity?.IsAuthenticated == true)
                 {
+                    var selectedOrgJson = User.FindFirst("organization")?.Value;
+                    var orgsJson = User.FindFirst("organizations")?.Value;
+                    string? currentOrgId = null;
+                    string? currentOrgName = null;
+                    var organizations = new List<(string Id, string Name)>();
+
+                    if (!string.IsNullOrEmpty(selectedOrgJson))
+                    {
+                        try
+                        {
+                            var doc = System.Text.Json.JsonDocument.Parse(selectedOrgJson);
+                            if (doc.RootElement.TryGetProperty("id", out var idProp))
+                                currentOrgId = idProp.GetString();
+                            if (doc.RootElement.TryGetProperty("name", out var nameProp))
+                                currentOrgName = nameProp.GetString();
+                        }
+                        catch { }
+                    }
+
+                    if (!string.IsNullOrEmpty(orgsJson))
+                    {
+                        try
+                        {
+                            var arr = System.Text.Json.JsonDocument.Parse(orgsJson).RootElement;
+                            foreach (var org in arr.EnumerateArray())
+                            {
+                                var id = org.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                                var name = org.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+                                if (id != null && name != null)
+                                    organizations.Add((id, name));
+                            }
+                        }
+                        catch { }
+                    }
+
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-building"></i>
+                            <span>@(currentOrgName ?? "No Organization")</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header">Switch Organization</h6></li>
+                            @foreach (var org in organizations)
+                            {
+                                var isActive = org.Id == currentOrgId;
+                                <li>
+                                    <a class="dropdown-item @(isActive ? "active" : "")" href="/switch-org?organization_id=@org.Id">
+                                        @org.Name
+                                        @if (isActive)
+                                        {
+                                            <i class="bi bi-check ms-2"></i>
+                                        }
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
                     <span class="text-white">@User.Identity.Name</span>
                     <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
                 }

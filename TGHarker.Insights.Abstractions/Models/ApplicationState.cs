@@ -19,6 +19,10 @@ public sealed class ApplicationState
     [Queryable(Indexed = true)]
     public string OwnerId { get; set; } = string.Empty;
 
+    [Id(9)]
+    [Queryable(Indexed = true)]
+    public string OrganizationId { get; set; } = string.Empty;
+
     [Id(3)]
     [Queryable]
     public string Domain { get; set; } = string.Empty;

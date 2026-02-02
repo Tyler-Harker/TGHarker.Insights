@@ -27,7 +27,8 @@ public class ApplicationGrain : Grain, IApplicationGrain
             state.ApiKey,
             state.CreatedAt,
             state.IsActive,
-            state.Settings
+            state.Settings,
+            state.OrganizationId
         ));
     }
 
@@ -39,6 +40,7 @@ public class ApplicationGrain : Grain, IApplicationGrain
             Name = request.Name,
             OwnerId = request.OwnerId,
             Domain = request.Domain,
+            OrganizationId = request.OrganizationId,
             ApiKey = GenerateApiKey(),
             CreatedAt = DateTime.UtcNow,
             IsActive = true,

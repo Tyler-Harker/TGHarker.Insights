@@ -2,53 +2,159 @@
 @model TGHarker.Insights.Web.Pages.Dashboard.IndexModel
 @{
     ViewData["Title"] = "Dashboard";
+    ViewData["CurrentPage"] = "overview";
+    Layout = "_MainDashboardLayout";
 }
 
-<div class="row">
-    <div class="col-md-3 sidebar py-4">
-        <h6 class="px-3 text-muted text-uppercase small fw-bold mb-3">Applications</h6>
-        <nav class="nav flex-column">
-            @foreach (var app in Model.Applications)
-            {
-                var appId = app.Id.StartsWith("app-") ? app.Id[4..] : app.Id;
-                <a class="nav-link" href="/dashboard/@appId">
-                    @app.Name
-                    <small class="text-muted d-block">@app.Domain</small>
-                </a>
-            }
-        </nav>
-        <div class="px-3 mt-4">
-            <a href="/dashboard/new" class="btn btn-primary btn-sm w-100">Add Application</a>
-        </div>
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header">
+        <h4>Overview</h4>
+        <p class="page-description">Aggregated analytics across all your applications.</p>
     </div>
-    <div class="col-md-9 py-4">
-        <div class="container">
-            @if (Model.Applications.Count == 0)
-            {
-                <div class="text-center py-5">
-                    <h3>Welcome to Insights!</h3>
-                    <p class="text-muted">Create your first application to start tracking analytics.</p>
-                    <a href="/dashboard/new" class="btn btn-primary">Create Application</a>
-                </div>
-            }
-            else
-            {
-                <h4 class="mb-4">Select an application to view analytics</h4>
-                <div class="row">
-                    @foreach (var app in Model.Applications)
-                    {
-                        var appId = app.Id.StartsWith("app-") ? app.Id[4..] : app.Id;
-                        <div class="col-md-6 mb-3">
-                            <a href="/dashboard/@appId" class="text-decoration-none">
-                                <div class="metric-card">
-                                    <h5 class="mb-1">@app.Name</h5>
-                                    <small class="text-muted">@app.Domain</small>
-                                </div>
-                            </a>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
+    <div class="btn-group">
+        <a href="/dashboard?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
+        <a href="/dashboard?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
+        <a href="/dashboard?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
     </div>
 </div>
+
+@if (Model.Applications.Count == 0)
+{
+    <div class="chart-container text-center py-5">
+        <i class="bi bi-bar-chart-fill display-1 text-muted mb-4 d-block"></i>
+        <h3>Welcome to Insights!</h3>
+        <p class="text-muted mb-4">Create your first application to start tracking analytics.</p>
+        <a href="/dashboard/new" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-2"></i>Create Application
+        </a>
+    </div>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Total Page Views</div>
+                <div class="metric-value">@Model.Metrics.PageViews.ToString("N0")</div>
+                <div class="metric-card-help">Across all applications</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Total Sessions</div>
+                <div class="metric-value">@Model.Metrics.Sessions.ToString("N0")</div>
+                <div class="metric-card-help">Across all applications</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Avg. Bounce Rate</div>
+                <div class="metric-value">@Model.Metrics.BounceRate.ToString("F1")%</div>
+                <div class="metric-card-help">Single-page visits</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Applications</div>
+                <div class="metric-value">@Model.Metrics.TotalApplications</div>
+                <div class="metric-card-help">Active tracking</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h6 class="mb-3">Traffic Overview</h6>
+                @if (Model.ChartData.Any(d => d > 0))
+                {
+                    <canvas id="trafficChart" height="100"></canvas>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-graph-up d-block mb-2" style="font-size: 2rem;"></i>
+                        No traffic data for the selected period.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">Top Applications</h6>
+                    <a href="/dashboard/applications" class="btn btn-outline-secondary btn-sm">View All</a>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Application</th>
+                            <th class="text-end">Page Views</th>
+                            <th class="text-end">Sessions</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var app in Model.TopApplications)
+                        {
+                            <tr>
+                                <td>
+                                    <a href="/dashboard/@app.AppId" class="fw-medium text-decoration-none">@app.Name</a>
+                                    <br />
+                                    <small class="text-muted">@app.Domain</small>
+                                </td>
+                                <td class="text-end">@app.PageViews.ToString("N0")</td>
+                                <td class="text-end">@app.Sessions.ToString("N0")</td>
+                                <td class="text-end">
+                                    <a href="/dashboard/@app.AppId" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.TopApplications.Any())
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No data available for the selected period.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+    @if (Model.ChartData.Any(d => d > 0))
+    {
+        <text>
+        new Chart(document.getElementById('trafficChart'), {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels)),
+                datasets: [{
+                    label: 'Page Views',
+                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartData)),
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+        </text>
+    }
+</script>
+}

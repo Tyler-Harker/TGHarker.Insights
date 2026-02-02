@@ -12,14 +12,16 @@ public record ApplicationInfo(
     [property: Id(4)] string ApiKey,
     [property: Id(5)] DateTime CreatedAt,
     [property: Id(6)] bool IsActive,
-    [property: Id(7)] ApplicationSettings Settings
+    [property: Id(7)] ApplicationSettings Settings,
+    [property: Id(8)] string OrganizationId
 );
 
 [GenerateSerializer]
 public record CreateApplicationRequest(
     [property: Id(0)] string Name,
     [property: Id(1)] string OwnerId,
-    [property: Id(2)] string Domain
+    [property: Id(2)] string Domain,
+    [property: Id(3)] string OrganizationId
 );
 
 [GenerateSerializer]

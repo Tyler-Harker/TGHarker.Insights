@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Orleans;
 using TGHarker.Insights.Abstractions.DTOs;
 using TGHarker.Insights.Abstractions.Grains;
@@ -27,12 +28,12 @@ public static class ApplicationEndpoints
         HttpContext context,
         IClusterClient client)
     {
-        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userId))
-            return Results.Unauthorized();
+        var organizationId = GetOrganizationId(context);
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.Forbid();
 
         var grains = await client.Search<IApplicationGrain>()
-            .Where(a => a.OwnerId == userId)
+            .Where(a => a.OrganizationId == organizationId)
             .ToListAsync();
 
         var results = new List<ApplicationInfo>();
@@ -53,10 +54,14 @@ public static class ApplicationEndpoints
         if (string.IsNullOrEmpty(userId))
             return Results.Unauthorized();
 
+        var organizationId = GetOrganizationId(context);
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.Forbid();
+
         var applicationId = Guid.NewGuid().ToString("N")[..12];
         var grain = client.GetGrain<IApplicationGrain>($"app-{applicationId}");
 
-        await grain.CreateAsync(request with { OwnerId = userId });
+        await grain.CreateAsync(request with { OwnerId = userId, OrganizationId = organizationId });
         var info = await grain.GetInfoAsync();
 
         return Results.Created($"/api/applications/{applicationId}", info);
@@ -67,9 +72,9 @@ public static class ApplicationEndpoints
         HttpContext context,
         IClusterClient client)
     {
-        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userId))
-            return Results.Unauthorized();
+        var organizationId = GetOrganizationId(context);
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.Forbid();
 
         var grain = client.GetGrain<IApplicationGrain>($"app-{applicationId}");
         var info = await grain.GetInfoAsync();
@@ -77,7 +82,7 @@ public static class ApplicationEndpoints
         if (string.IsNullOrEmpty(info.Id))
             return Results.NotFound();
 
-        if (info.OwnerId != userId)
+        if (info.OrganizationId != organizationId)
             return Results.Forbid();
 
         return Results.Ok(info);
@@ -89,9 +94,9 @@ public static class ApplicationEndpoints
         HttpContext context,
         IClusterClient client)
     {
-        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userId))
-            return Results.Unauthorized();
+        var organizationId = GetOrganizationId(context);
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.Forbid();
 
         var grain = client.GetGrain<IApplicationGrain>($"app-{applicationId}");
         var info = await grain.GetInfoAsync();
@@ -99,7 +104,7 @@ public static class ApplicationEndpoints
         if (string.IsNullOrEmpty(info.Id))
             return Results.NotFound();
 
-        if (info.OwnerId != userId)
+        if (info.OrganizationId != organizationId)
             return Results.Forbid();
 
         await grain.UpdateAsync(request);
@@ -111,9 +116,9 @@ public static class ApplicationEndpoints
         HttpContext context,
         IClusterClient client)
     {
-        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userId))
-            return Results.Unauthorized();
+        var organizationId = GetOrganizationId(context);
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.Forbid();
 
         var grain = client.GetGrain<IApplicationGrain>($"app-{applicationId}");
         var info = await grain.GetInfoAsync();
@@ -121,7 +126,7 @@ public static class ApplicationEndpoints
         if (string.IsNullOrEmpty(info.Id))
             return Results.NotFound();
 
-        if (info.OwnerId != userId)
+        if (info.OrganizationId != organizationId)
             return Results.Forbid();
 
         await grain.DeleteAsync();
@@ -133,9 +138,9 @@ public static class ApplicationEndpoints
         HttpContext context,
         IClusterClient client)
     {
-        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userId))
-            return Results.Unauthorized();
+        var organizationId = GetOrganizationId(context);
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.Forbid();
 
         var grain = client.GetGrain<IApplicationGrain>($"app-{applicationId}");
         var info = await grain.GetInfoAsync();
@@ -143,10 +148,27 @@ public static class ApplicationEndpoints
         if (string.IsNullOrEmpty(info.Id))
             return Results.NotFound();
 
-        if (info.OwnerId != userId)
+        if (info.OrganizationId != organizationId)
             return Results.Forbid();
 
         await grain.RegenerateApiKeyAsync();
         return Results.Ok(await grain.GetInfoAsync());
+    }
+
+    private static string? GetOrganizationId(HttpContext context)
+    {
+        var orgClaim = context.User.FindFirst("organization")?.Value;
+        if (string.IsNullOrEmpty(orgClaim))
+            return null;
+
+        try
+        {
+            var doc = JsonDocument.Parse(orgClaim);
+            if (doc.RootElement.TryGetProperty("id", out var idProp))
+                return idProp.GetString();
+        }
+        catch { }
+
+        return null;
     }
 }
