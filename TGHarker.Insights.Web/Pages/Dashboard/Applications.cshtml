@@ -51,7 +51,7 @@
                 var appId = app.Id.StartsWith("app-") ? app.Id[4..] : app.Id;
                 <tr>
                     <td>
-                        <a href="/dashboard/@appId" class="fw-medium text-decoration-none">@app.Name</a>
+                        <a href="/dashboard/applications/@appId" class="fw-medium text-decoration-none">@app.Name</a>
                     </td>
                     <td class="text-muted">@app.Domain</td>
                     <td class="text-muted">@app.CreatedAt.ToString("MMM d, yyyy")</td>
@@ -66,10 +66,10 @@
                         }
                     </td>
                     <td class="text-end">
-                        <a href="/dashboard/@appId" class="btn btn-sm btn-outline-primary me-1">
+                        <a href="/dashboard/applications/@appId" class="btn btn-sm btn-outline-primary me-1">
                             <i class="bi bi-bar-chart me-1"></i>Analytics
                         </a>
-                        <a href="/dashboard/@appId/settings" class="btn btn-sm btn-outline-secondary">
+                        <a href="/dashboard/applications/@appId/settings" class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-gear"></i>
                         </a>
                     </td>

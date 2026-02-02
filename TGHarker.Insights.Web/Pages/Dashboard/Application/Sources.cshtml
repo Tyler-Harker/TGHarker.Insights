@@ -1,4 +1,4 @@
-@page "/dashboard/{applicationId}/sources"
+@page "/dashboard/applications/{applicationId}/sources"
 @model TGHarker.Insights.Web.Pages.Dashboard.Application.SourcesModel
 @{
     ViewData["Title"] = "Sources";
@@ -11,9 +11,9 @@
         <p class="page-description">Understand where your visitors are coming from and which channels drive the most traffic.</p>
     </div>
     <div class="btn-group">
-        <a href="/dashboard/@Model.ApplicationId/sources?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
-        <a href="/dashboard/@Model.ApplicationId/sources?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
-        <a href="/dashboard/@Model.ApplicationId/sources?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+        <a href="/dashboard/applications/@Model.ApplicationId/sources?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
+        <a href="/dashboard/applications/@Model.ApplicationId/sources?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
+        <a href="/dashboard/applications/@Model.ApplicationId/sources?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
     </div>
 </div>
 

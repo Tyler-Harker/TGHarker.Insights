@@ -1,4 +1,4 @@
-@page "/dashboard/{applicationId}/conversions"
+@page "/dashboard/applications/{applicationId}/conversions"
 @model TGHarker.Insights.Web.Pages.Dashboard.Application.ConversionsModel
 @{
     ViewData["Title"] = "Conversions";
@@ -12,9 +12,9 @@
     </div>
     <div class="d-flex gap-2">
         <div class="btn-group">
-            <a href="/dashboard/@Model.ApplicationId/conversions?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
-            <a href="/dashboard/@Model.ApplicationId/conversions?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
-            <a href="/dashboard/@Model.ApplicationId/conversions?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+            <a href="/dashboard/applications/@Model.ApplicationId/conversions?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
+            <a href="/dashboard/applications/@Model.ApplicationId/conversions?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
+            <a href="/dashboard/applications/@Model.ApplicationId/conversions?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
         </div>
         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newGoalModal">
             <i class="bi bi-plus-lg me-1"></i> New Goal

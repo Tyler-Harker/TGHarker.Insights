@@ -58,7 +58,7 @@
                 var appId = app.Id.StartsWith("app-") ? app.Id[4..] : app.Id;
                 var isActive = appId == Model.ApplicationId;
                 <li>
-                    <a class="dropdown-item d-flex flex-column @(isActive ? "active" : "")" href="/dashboard/@appId">
+                    <a class="dropdown-item d-flex flex-column @(isActive ? "active" : "")" href="/dashboard/applications/@appId">
                         <span class="fw-medium">@app.Name</span>
                         <small class="text-muted">@app.Domain</small>
                     </a>
@@ -77,32 +77,32 @@
 <!-- Navigation -->
 <div class="sidebar-section-title">Analytics</div>
 <nav class="sidebar-nav nav flex-column">
-    <a class="nav-link @(currentPage == "overview" ? "active" : "")" href="/dashboard/@Model.ApplicationId">
+    <a class="nav-link @(currentPage == "overview" ? "active" : "")" href="/dashboard/applications/@Model.ApplicationId">
         <i class="bi bi-speedometer2"></i>Overview
     </a>
-    <a class="nav-link @(currentPage == "realtime" ? "active" : "")" href="/dashboard/@Model.ApplicationId/realtime">
+    <a class="nav-link @(currentPage == "realtime" ? "active" : "")" href="/dashboard/applications/@Model.ApplicationId/realtime">
         <i class="bi bi-broadcast"></i>Real-time
     </a>
-    <a class="nav-link @(currentPage == "pages" ? "active" : "")" href="/dashboard/@Model.ApplicationId/pages">
+    <a class="nav-link @(currentPage == "pages" ? "active" : "")" href="/dashboard/applications/@Model.ApplicationId/pages">
         <i class="bi bi-file-earmark-text"></i>Pages
     </a>
-    <a class="nav-link @(currentPage == "sources" ? "active" : "")" href="/dashboard/@Model.ApplicationId/sources">
+    <a class="nav-link @(currentPage == "sources" ? "active" : "")" href="/dashboard/applications/@Model.ApplicationId/sources">
         <i class="bi bi-diagram-3"></i>Sources
     </a>
-    <a class="nav-link @(currentPage == "events" ? "active" : "")" href="/dashboard/@Model.ApplicationId/events">
+    <a class="nav-link @(currentPage == "events" ? "active" : "")" href="/dashboard/applications/@Model.ApplicationId/events">
         <i class="bi bi-cursor"></i>Events
     </a>
-    <a class="nav-link @(currentPage == "conversions" ? "active" : "")" href="/dashboard/@Model.ApplicationId/conversions">
+    <a class="nav-link @(currentPage == "conversions" ? "active" : "")" href="/dashboard/applications/@Model.ApplicationId/conversions">
         <i class="bi bi-bullseye"></i>Conversions
     </a>
-    <a class="nav-link @(currentPage == "funnels" ? "active" : "")" href="/dashboard/@Model.ApplicationId/funnels">
+    <a class="nav-link @(currentPage == "funnels" ? "active" : "")" href="/dashboard/applications/@Model.ApplicationId/funnels">
         <i class="bi bi-filter"></i>Funnels
     </a>
 </nav>
 
 <div class="sidebar-section-title">Configuration</div>
 <nav class="sidebar-nav nav flex-column">
-    <a class="nav-link @(currentPage == "settings" ? "active" : "")" href="/dashboard/@Model.ApplicationId/settings">
+    <a class="nav-link @(currentPage == "settings" ? "active" : "")" href="/dashboard/applications/@Model.ApplicationId/settings">
         <i class="bi bi-gear"></i>Settings
     </a>
 </nav>

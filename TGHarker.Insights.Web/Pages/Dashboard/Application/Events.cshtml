@@ -1,4 +1,4 @@
-@page "/dashboard/{applicationId}/events"
+@page "/dashboard/applications/{applicationId}/events"
 @model TGHarker.Insights.Web.Pages.Dashboard.Application.EventsModel
 @{
     ViewData["Title"] = "Events";
@@ -11,9 +11,9 @@
         <p class="page-description">Track specific user interactions like button clicks, form submissions, and other custom actions.</p>
     </div>
     <div class="btn-group">
-        <a href="/dashboard/@Model.ApplicationId/events?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
-        <a href="/dashboard/@Model.ApplicationId/events?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
-        <a href="/dashboard/@Model.ApplicationId/events?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+        <a href="/dashboard/applications/@Model.ApplicationId/events?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
+        <a href="/dashboard/applications/@Model.ApplicationId/events?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
+        <a href="/dashboard/applications/@Model.ApplicationId/events?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
     </div>
 </div>
 
