@@ -17,18 +17,8 @@ public class SearchDesignTimeContextFactory : IDesignTimeDbContextFactory<Search
 
         // Default connection string for design-time (migrations)
         // Override by setting environment variable or passing --connection argument
-        var connectionString = Environment.GetEnvironmentVariable("SEARCH_DB_CONNECTION")
+        var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING")
             ?? "Host=localhost;Database=searchdb;Username=postgres;Password=postgres";
-
-        // Parse --connection argument if provided
-        for (int i = 0; i < args.Length - 1; i++)
-        {
-            if (args[i] == "--connection")
-            {
-                connectionString = args[i + 1];
-                break;
-            }
-        }
 
         optionsBuilder.UseNpgsql(connectionString, npgsql =>
         {

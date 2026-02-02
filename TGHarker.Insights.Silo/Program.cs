@@ -24,8 +24,7 @@ var isAspireManaged = !string.IsNullOrEmpty(builder.Configuration["Orleans:Clust
 var isLocalDevelopment = builder.Environment.IsDevelopment() ||
     string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CONTAINER_APP_NAME"));
 
-var connectionString = builder.Configuration.GetConnectionString("searchdb-insights")
-    ?? "Host=localhost;Database=searchdb;Username=postgres;Password=postgres";
+var connectionString = builder.Configuration.GetConnectionString("searchdb-insights");
 
 // Orleans silo configuration - Aspire auto-configures clustering and grain storage
 builder.UseOrleans(siloBuilder =>
