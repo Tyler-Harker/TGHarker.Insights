@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.HttpOverrides;
 using TGHarker.Insights.Web.Endpoints;
 using TGHarker.Insights.Web.Services;
 using TGHarker.Insights.Abstractions.Models.Generated;
@@ -97,6 +98,12 @@ builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
+
+// Handle forwarded headers from reverse proxy (required for HTTPS redirect URIs behind proxy)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 app.UseStaticFiles();
 app.UseRouting();
