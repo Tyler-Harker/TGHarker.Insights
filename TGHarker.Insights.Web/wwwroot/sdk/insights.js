@@ -2,36 +2,46 @@
     'use strict';
 
     const Insights = {
-        _propertyId: null,
+        _applicationId: null,
         _apiEndpoint: null,
         _visitorId: null,
         _sessionId: null,
         _queue: [],
         _initialized: false,
         _debug: false,
+        _scriptTag: null,
 
         /**
          * Initialize the Insights SDK
-         * @param {Object} config - Configuration object
-         * @param {string} config.propertyId - Your property ID
-         * @param {string} [config.endpoint] - API endpoint URL
+         * @param {Object} [config] - Configuration object (optional if using script tag attributes)
+         * @param {string} [config.applicationId] - Your application ID
+         * @param {string} [config.endpoint] - API endpoint URL (defaults to script origin + /api/collect)
          * @param {boolean} [config.autoPageView=true] - Auto-track page views
          * @param {boolean} [config.debug=false] - Enable debug logging
          */
         init: function(config) {
-            if (!config.propertyId) {
-                console.error('[Insights] propertyId is required');
+            config = config || {};
+
+            // Get config from script tag attributes if not provided
+            var scriptConfig = this._getScriptTagConfig();
+
+            var applicationId = config.applicationId || scriptConfig.applicationId;
+            var endpoint = config.endpoint || scriptConfig.endpoint || '/api/collect';
+            var debug = config.debug || scriptConfig.debug || false;
+
+            if (!applicationId) {
+                console.error('[Insights] applicationId is required. Set data-application on the script tag or pass it to init()');
                 return;
             }
 
-            this._propertyId = config.propertyId;
-            this._apiEndpoint = config.endpoint || '/api/collect';
-            this._debug = config.debug || false;
+            this._applicationId = applicationId;
+            this._apiEndpoint = endpoint;
+            this._debug = debug;
             this._visitorId = this._getOrCreateVisitorId();
             this._sessionId = this._getOrCreateSessionId();
             this._initialized = true;
 
-            this._log('Initialized with propertyId:', this._propertyId);
+            this._log('Initialized with applicationId:', this._applicationId);
 
             // Start session
             this._startSession();
@@ -186,7 +196,7 @@
 
             var payload = {
                 type: type,
-                propertyId: this._propertyId,
+                applicationId: this._applicationId,
                 visitorId: this._visitorId,
                 sessionId: this._sessionId,
                 timestamp: new Date().toISOString(),
@@ -290,14 +300,49 @@
             if (this._debug) {
                 console.log.apply(console, ['[Insights]'].concat(Array.prototype.slice.call(arguments)));
             }
+        },
+
+        _getScriptTagConfig: function() {
+            if (!this._scriptTag) {
+                // Find the script tag that loaded this SDK
+                this._scriptTag = document.currentScript ||
+                    document.querySelector('script[insights-target]');
+            }
+
+            if (!this._scriptTag) {
+                return {};
+            }
+
+            // Infer endpoint from script src URL
+            var endpoint = this._scriptTag.getAttribute('data-endpoint');
+            if (!endpoint) {
+                var src = this._scriptTag.getAttribute('src');
+                if (src) {
+                    try {
+                        var url = new URL(src, window.location.origin);
+                        endpoint = url.origin + '/api/collect';
+                    } catch (e) {
+                        endpoint = '/api/collect';
+                    }
+                }
+            }
+
+            return {
+                applicationId: this._scriptTag.getAttribute('data-application'),
+                endpoint: endpoint,
+                debug: this._scriptTag.getAttribute('data-debug') === 'true'
+            };
         }
     };
 
     // Expose globally
     window.Insights = Insights;
 
-    // Auto-init if config is present
-    if (window.InsightsConfig) {
+    // Auto-init if script tag has data-application or InsightsConfig is present
+    var scriptConfig = Insights._getScriptTagConfig();
+    if (scriptConfig.applicationId) {
+        Insights.init();
+    } else if (window.InsightsConfig) {
         Insights.init(window.InsightsConfig);
     }
 

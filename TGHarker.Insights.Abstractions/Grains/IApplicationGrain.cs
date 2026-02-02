@@ -10,6 +10,9 @@ public interface IApplicationGrain : IGrainWithStringKey
     Task CreateAsync(CreateApplicationRequest request);
     Task UpdateAsync(UpdateApplicationRequest request);
     Task<bool> ValidateApiKeyAsync(string apiKey);
+    Task<bool> ValidateOriginAsync(string origin);
+    Task<List<string>> GetAllowedOriginsAsync();
+    Task SetAllowedOriginsAsync(List<string> origins);
     Task RegenerateApiKeyAsync();
     Task DeleteAsync();
     Task RegisterUserAttributeKeysAsync(IEnumerable<string> keys);

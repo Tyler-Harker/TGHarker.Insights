@@ -72,6 +72,70 @@ public class ApplicationGrain : Grain, IApplicationGrain
         return Task.FromResult(_state.State.ApiKey == apiKey && _state.State.IsActive);
     }
 
+    public Task<bool> ValidateOriginAsync(string origin)
+    {
+        if (!_state.State.IsActive)
+            return Task.FromResult(false);
+
+        // If no allowed origins and no domain configured, allow all (for backwards compatibility / ease of setup)
+        if (_state.State.AllowedOrigins.Count == 0 && string.IsNullOrEmpty(_state.State.Domain))
+            return Task.FromResult(true);
+
+        // Check if origin matches the configured domain
+        if (!string.IsNullOrEmpty(_state.State.Domain) && MatchesOrigin(_state.State.Domain, origin))
+            return Task.FromResult(true);
+
+        // Check if origin matches any allowed origin
+        var isValid = _state.State.AllowedOrigins.Any(allowed =>
+            string.Equals(allowed, "*", StringComparison.OrdinalIgnoreCase) ||
+            MatchesOrigin(allowed, origin));
+
+        return Task.FromResult(isValid);
+    }
+
+    private static bool MatchesOrigin(string allowed, string origin)
+    {
+        if (string.IsNullOrEmpty(origin))
+            return false;
+
+        // Direct match
+        if (string.Equals(allowed, origin, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        try
+        {
+            var originUri = new Uri(origin);
+            var host = originUri.Host;
+
+            // Wildcard subdomain match (e.g., "*.example.com" matches "sub.example.com")
+            if (allowed.StartsWith("*."))
+            {
+                var suffix = allowed[1..]; // ".example.com"
+                return host.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) ||
+                       string.Equals(host, allowed[2..], StringComparison.OrdinalIgnoreCase); // also match "example.com"
+            }
+
+            // Check if origin's host matches the allowed domain
+            // e.g., allowed="example.com" should match origin="https://example.com"
+            return string.Equals(host, allowed, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public Task<List<string>> GetAllowedOriginsAsync()
+    {
+        return Task.FromResult(_state.State.AllowedOrigins.ToList());
+    }
+
+    public async Task SetAllowedOriginsAsync(List<string> origins)
+    {
+        _state.State.AllowedOrigins = origins;
+        await _state.WriteStateAsync();
+    }
+
     public async Task RegenerateApiKeyAsync()
     {
         _state.State.ApiKey = GenerateApiKey();

@@ -14,6 +14,10 @@ public static class CollectEndpoints
             .WithTags("Collect")
             .AllowAnonymous();
 
+        // Handle CORS preflight for collect endpoints
+        group.MapMethods("/", new[] { "OPTIONS" }, HandleCorsPreflight);
+        group.MapMethods("/batch", new[] { "OPTIONS" }, HandleCorsPreflight);
+
         group.MapPost("/", HandleCollect)
             .WithName("Collect");
 
@@ -24,19 +28,36 @@ public static class CollectEndpoints
             .WithName("GetCollectConfig");
     }
 
+    private static IResult HandleCorsPreflight(HttpContext context)
+    {
+        var origin = context.Request.Headers.Origin.FirstOrDefault();
+        if (!string.IsNullOrEmpty(origin))
+        {
+            context.Response.Headers.AccessControlAllowOrigin = origin;
+            context.Response.Headers.AccessControlAllowMethods = "POST, OPTIONS";
+            context.Response.Headers.AccessControlAllowHeaders = "Content-Type";
+            context.Response.Headers.AccessControlMaxAge = "86400";
+        }
+        return Results.Ok();
+    }
+
     private static async Task<IResult> HandleCollect(
         HttpContext context,
         CollectRequest request,
         IClusterClient client,
         ILogger<CollectEndpointHandler> logger)
     {
-        var apiKey = context.Request.Headers["X-API-Key"].FirstOrDefault();
-        if (string.IsNullOrEmpty(apiKey))
-            return Results.Unauthorized();
+        var origin = context.Request.Headers.Origin.FirstOrDefault() ?? "";
 
-        var propertyGrain = client.GetGrain<IApplicationGrain>($"app-{request.ApplicationId}");
-        if (!await propertyGrain.ValidateApiKeyAsync(apiKey))
-            return Results.Unauthorized();
+        var applicationGrain = client.GetGrain<IApplicationGrain>($"app-{request.ApplicationId}");
+        if (!await applicationGrain.ValidateOriginAsync(origin))
+            return Results.StatusCode(403);
+
+        // Add CORS headers for the response
+        if (!string.IsNullOrEmpty(origin))
+        {
+            context.Response.Headers.AccessControlAllowOrigin = origin;
+        }
 
         await ProcessEvent(client, request, logger);
         return Results.NoContent();
@@ -48,17 +69,21 @@ public static class CollectEndpoints
         IClusterClient client,
         ILogger<CollectEndpointHandler> logger)
     {
-        var apiKey = context.Request.Headers["X-API-Key"].FirstOrDefault();
-        if (string.IsNullOrEmpty(apiKey))
-            return Results.Unauthorized();
-
         if (request.Events.Count == 0)
             return Results.NoContent();
 
+        var origin = context.Request.Headers.Origin.FirstOrDefault() ?? "";
         var applicationId = request.Events.First().ApplicationId;
-        var propertyGrain = client.GetGrain<IApplicationGrain>($"app-{applicationId}");
-        if (!await propertyGrain.ValidateApiKeyAsync(apiKey))
-            return Results.Unauthorized();
+
+        var applicationGrain = client.GetGrain<IApplicationGrain>($"app-{applicationId}");
+        if (!await applicationGrain.ValidateOriginAsync(origin))
+            return Results.StatusCode(403);
+
+        // Add CORS headers for the response
+        if (!string.IsNullOrEmpty(origin))
+        {
+            context.Response.Headers.AccessControlAllowOrigin = origin;
+        }
 
         foreach (var evt in request.Events)
         {

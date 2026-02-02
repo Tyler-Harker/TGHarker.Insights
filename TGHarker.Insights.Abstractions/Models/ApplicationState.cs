@@ -38,4 +38,6 @@ public sealed class ApplicationState
     [Id(7)] public ApplicationSettings Settings { get; set; } = new();
 
     [Id(8)] public Dictionary<string, UserAttributeDefinition> UserAttributes { get; set; } = new();
+
+    [Id(10)] public List<string> AllowedOrigins { get; set; } = [];
 }

@@ -94,6 +94,9 @@ builder.Services.AddScoped<ThemeService>();
 // Razor Pages
 builder.Services.AddRazorPages();
 
+// CORS for collect endpoints (browser SDK calls from customer domains)
+builder.Services.AddCors();
+
 // API
 builder.Services.AddEndpointsApiExplorer();
 
@@ -107,6 +110,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
