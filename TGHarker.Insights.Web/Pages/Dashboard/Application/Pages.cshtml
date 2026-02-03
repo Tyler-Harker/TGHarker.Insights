@@ -13,7 +13,7 @@
     <div class="btn-group">
         <a href="/dashboard/applications/@Model.ApplicationId/pages?range=30d" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
         <a href="/dashboard/applications/@Model.ApplicationId/pages?range=7d" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
-        <a href="/dashboard/applications/@Model.ApplicationId/pages?range=today" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+        <a href="/dashboard/applications/@Model.ApplicationId/pages?range=24h" class="btn btn-outline-secondary btn-sm @(Model.Range == "24h" ? "active" : "")">Last 24 hours</a>
     </div>
 </div>
 

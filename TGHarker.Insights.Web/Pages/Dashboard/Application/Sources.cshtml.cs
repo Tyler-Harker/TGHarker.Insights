@@ -18,7 +18,7 @@ public class SourcesModel : DashboardPageModel
     public List<ReferrerStat> ReferrerStats { get; set; } = [];
 
     [BindProperty(SupportsGet = true)]
-    public string Range { get; set; } = "today";
+    public string Range { get; set; } = "24h";
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -32,7 +32,7 @@ public class SourcesModel : DashboardPageModel
         var from = Range switch
         {
             "7d" => DateTime.UtcNow.Date.AddDays(-7),
-            "today" => DateTime.UtcNow.Date,
+            "24h" => DateTime.UtcNow.AddHours(-24),
             _ => DateTime.UtcNow.Date.AddDays(-30) // default 30d
         };
 

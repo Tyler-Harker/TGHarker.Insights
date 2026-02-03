@@ -27,9 +27,11 @@ public class IndexModel : PageModel
     public List<AppMetricSummary> TopApplications { get; set; } = [];
     public List<string> ChartLabels { get; set; } = [];
     public List<int> ChartData { get; set; } = [];
+    public List<string> ChartTimestamps { get; set; } = [];
+    public bool IsHourlyChart { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string Range { get; set; } = "today";
+    public string Range { get; set; } = "24h";
 
     public async Task OnGetAsync()
     {
@@ -55,7 +57,7 @@ public class IndexModel : PageModel
         var from = Range switch
         {
             "7d" => DateTime.UtcNow.Date.AddDays(-7),
-            "today" => DateTime.UtcNow.Date,
+            "24h" => DateTime.UtcNow.AddHours(-24),
             _ => DateTime.UtcNow.Date.AddDays(-30)
         };
 
@@ -126,20 +128,24 @@ public class IndexModel : PageModel
             })
             .ToList();
 
-        // Chart data - hourly for "today", daily for other ranges
-        if (Range == "today")
+        // Chart data - hourly for "24h", daily for other ranges
+        if (Range == "24h")
         {
+            IsHourlyChart = true;
             var hourlyMetrics = allMetrics
                 .GroupBy(m => m.HourStart)
                 .OrderBy(g => g.Key)
                 .Select(g => new { Hour = g.Key, PageViews = g.Sum(m => m.PageViews) })
                 .ToList();
 
-            ChartLabels = hourlyMetrics.Select(h => h.Hour.ToString("h tt")).ToList();
+            // Pass UTC timestamps for JavaScript to convert to local time
+            ChartTimestamps = hourlyMetrics.Select(h => h.Hour.ToString("o")).ToList();
+            ChartLabels = hourlyMetrics.Select(h => h.Hour.ToString("h tt")).ToList(); // Fallback
             ChartData = hourlyMetrics.Select(h => h.PageViews).ToList();
         }
         else
         {
+            IsHourlyChart = false;
             var dailyMetrics = allMetrics
                 .GroupBy(m => m.HourStart.Date)
                 .OrderBy(g => g.Key)

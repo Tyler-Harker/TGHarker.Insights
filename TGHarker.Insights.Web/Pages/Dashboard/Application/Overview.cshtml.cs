@@ -19,6 +19,8 @@ public class OverviewModel : DashboardPageModel
     public List<PageStat> TopPages { get; set; } = [];
     public List<string> ChartLabels { get; set; } = [];
     public List<int> ChartData { get; set; } = [];
+    public List<string> ChartTimestamps { get; set; } = [];
+    public bool IsHourlyChart { get; set; }
     public List<string> SourceLabels { get; set; } = [];
     public List<int> SourceData { get; set; } = [];
     public List<UserAttributeDefinition> FilterableAttributes { get; set; } = [];
@@ -31,7 +33,7 @@ public class OverviewModel : DashboardPageModel
     public string? FilterValue { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string Range { get; set; } = "today";
+    public string Range { get; set; } = "24h";
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -45,7 +47,7 @@ public class OverviewModel : DashboardPageModel
         var from = Range switch
         {
             "7d" => DateTime.UtcNow.Date.AddDays(-7),
-            "today" => DateTime.UtcNow.Date,
+            "24h" => DateTime.UtcNow.AddHours(-24),
             _ => DateTime.UtcNow.Date.AddDays(-30) // default 30d
         };
 
@@ -111,18 +113,22 @@ public class OverviewModel : DashboardPageModel
                 : 0
         };
 
-        // Chart data - hourly for "today", daily for other ranges
-        if (Range == "today")
+        // Chart data - hourly for "24h", daily for other ranges
+        if (Range == "24h")
         {
+            IsHourlyChart = true;
             var hourlyMetrics = metrics
                 .OrderBy(m => m.HourStart)
                 .ToList();
 
-            ChartLabels = hourlyMetrics.Select(m => m.HourStart.ToString("h tt")).ToList();
+            // Pass UTC timestamps for JavaScript to convert to local time
+            ChartTimestamps = hourlyMetrics.Select(m => m.HourStart.ToString("o")).ToList();
+            ChartLabels = hourlyMetrics.Select(m => m.HourStart.ToString("h tt")).ToList(); // Fallback
             ChartData = hourlyMetrics.Select(m => m.PageViews).ToList();
         }
         else
         {
+            IsHourlyChart = false;
             var dailyMetrics = metrics
                 .GroupBy(m => m.HourStart.Date)
                 .OrderBy(g => g.Key)

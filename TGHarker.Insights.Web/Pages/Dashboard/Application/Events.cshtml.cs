@@ -20,7 +20,7 @@ public class EventsModel : DashboardPageModel
     public List<EventStat> EventStats { get; set; } = [];
 
     [BindProperty(SupportsGet = true)]
-    public string Range { get; set; } = "today";
+    public string Range { get; set; } = "24h";
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -34,7 +34,7 @@ public class EventsModel : DashboardPageModel
         var from = Range switch
         {
             "7d" => DateTime.UtcNow.Date.AddDays(-7),
-            "today" => DateTime.UtcNow.Date,
+            "24h" => DateTime.UtcNow.AddHours(-24),
             _ => DateTime.UtcNow.Date.AddDays(-30) // default 30d
         };
 

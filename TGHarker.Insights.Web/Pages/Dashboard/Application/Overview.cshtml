@@ -63,7 +63,7 @@
             }
             <a href="@(baseUrl)?range=30d@(filterParams)" class="btn btn-outline-secondary btn-sm @(Model.Range == "30d" ? "active" : "")">Last 30 days</a>
             <a href="@(baseUrl)?range=7d@(filterParams)" class="btn btn-outline-secondary btn-sm @(Model.Range == "7d" ? "active" : "")">Last 7 days</a>
-            <a href="@(baseUrl)?range=today@(filterParams)" class="btn btn-outline-secondary btn-sm @(Model.Range == "today" ? "active" : "")">Today</a>
+            <a href="@(baseUrl)?range=24h@(filterParams)" class="btn btn-outline-secondary btn-sm @(Model.Range == "24h" ? "active" : "")">Last 24 hours</a>
         </div>
     </div>
 </div>
@@ -188,11 +188,22 @@
         }
     }
 
-    // Traffic chart
+    // Traffic chart - convert UTC timestamps to local time for hourly view
+    const isHourlyChart = @(Model.IsHourlyChart ? "true" : "false");
+    const chartTimestamps = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartTimestamps));
+    let chartLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels));
+
+    if (isHourlyChart && chartTimestamps.length > 0) {
+        chartLabels = chartTimestamps.map(ts => {
+            const date = new Date(ts);
+            return date.toLocaleTimeString([], { hour: 'numeric', hour12: true });
+        });
+    }
+
     new Chart(document.getElementById('trafficChart'), {
         type: 'line',
         data: {
-            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels)),
+            labels: chartLabels,
             datasets: [{
                 label: 'Page Views',
                 data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartData)),

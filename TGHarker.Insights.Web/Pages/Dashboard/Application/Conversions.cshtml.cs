@@ -21,7 +21,7 @@ public class ConversionsModel : DashboardPageModel
     public List<GoalStat> Goals { get; set; } = [];
 
     [BindProperty(SupportsGet = true)]
-    public string Range { get; set; } = "today";
+    public string Range { get; set; } = "24h";
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -35,7 +35,7 @@ public class ConversionsModel : DashboardPageModel
         var from = Range switch
         {
             "7d" => DateTime.UtcNow.Date.AddDays(-7),
-            "today" => DateTime.UtcNow.Date,
+            "24h" => DateTime.UtcNow.AddHours(-24),
             _ => DateTime.UtcNow.Date.AddDays(-30) // default 30d
         };
 
