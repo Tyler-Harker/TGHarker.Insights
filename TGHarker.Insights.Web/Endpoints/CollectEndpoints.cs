@@ -47,6 +47,7 @@ public static class CollectEndpoints
             context.Response.Headers.AccessControlAllowOrigin = origin;
             context.Response.Headers.AccessControlAllowMethods = "POST, OPTIONS";
             context.Response.Headers.AccessControlAllowHeaders = "Content-Type";
+            context.Response.Headers.AccessControlAllowCredentials = "true";
             context.Response.Headers.AccessControlMaxAge = "86400";
         }
         return Results.Ok();
@@ -73,6 +74,7 @@ public static class CollectEndpoints
         if (!string.IsNullOrEmpty(origin))
         {
             context.Response.Headers.AccessControlAllowOrigin = origin;
+            context.Response.Headers.AccessControlAllowCredentials = "true";
         }
 
         // Use applicationId from path
@@ -105,6 +107,7 @@ public static class CollectEndpoints
         if (!string.IsNullOrEmpty(origin))
         {
             context.Response.Headers.AccessControlAllowOrigin = origin;
+            context.Response.Headers.AccessControlAllowCredentials = "true";
         }
 
         foreach (var evt in request.Events)
