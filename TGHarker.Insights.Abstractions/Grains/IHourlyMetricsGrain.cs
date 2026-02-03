@@ -11,6 +11,7 @@ public interface IHourlyMetricsGrain : IGrainWithStringKey
     Task IncrementEventsAsync(string category);
     Task IncrementConversionsAsync(string goalId, decimal? value);
     Task IncrementBouncesAsync();
+    Task DecrementBouncesAsync();
     Task AddDurationAsync(int seconds);
     Task<HourlyMetrics> GetMetricsAsync();
 }

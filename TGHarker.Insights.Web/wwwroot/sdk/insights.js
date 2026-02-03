@@ -6,6 +6,7 @@
         _apiEndpoint: null,
         _visitorId: null,
         _sessionId: null,
+        _isNewSession: false,
         _queue: [],
         _initialized: false,
         _debug: false,
@@ -48,8 +49,10 @@
 
             this._log('Initialized with applicationId:', this._applicationId);
 
-            // Start session
-            this._startSession();
+            // Only send session_start for new sessions (not when resuming)
+            if (this._isNewSession) {
+                this._startSession();
+            }
 
             // Auto page view tracking
             if (config.autoPageView !== false) {
@@ -163,12 +166,14 @@
                 var timeSinceLastActivity = now - parseInt(lastActivity, 10);
                 if (timeSinceLastActivity < sessionTimeout) {
                     this._updateLastActivity();
+                    this._isNewSession = false;
                     return sessionId;
                 }
             }
 
             // Create new session
             sessionId = this._generateId();
+            this._isNewSession = true;
             try {
                 sessionStorage.setItem(storageKey, sessionId);
                 this._updateLastActivity();
@@ -252,13 +257,15 @@
         _setupSessionEnd: function() {
             var self = this;
 
+            // Send session_end when tab/browser closes or user navigates away
+            // Server-side is idempotent, so duplicate calls are harmless
             window.addEventListener('beforeunload', function() {
                 self._send('session_end', {
                     exitPage: window.location.pathname
                 });
             });
 
-            // Also track visibility change (mobile browsers)
+            // Also track visibility change for mobile (tab switch, app minimize)
             document.addEventListener('visibilitychange', function() {
                 if (document.visibilityState === 'hidden') {
                     self._send('session_end', {

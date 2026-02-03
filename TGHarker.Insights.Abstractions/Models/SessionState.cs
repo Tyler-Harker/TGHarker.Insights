@@ -84,4 +84,10 @@ public sealed class SessionState
     public bool HasConversion { get; set; }
 
     [Id(18)] public List<string> ConvertedGoalIds { get; set; } = [];
+
+    /// <summary>
+    /// Tracks which hourly metrics grain key the bounce was counted in (if any).
+    /// Used to decrement bounces when session becomes non-bounce.
+    /// </summary>
+    [Id(20)] public string? BounceCountedInHour { get; set; }
 }

@@ -22,6 +22,12 @@ public class SessionGrain : Grain, ISessionGrain
 
     public async Task StartAsync(SessionStartData data)
     {
+        // Idempotent: If session already exists, don't reset it or increment metrics again
+        if (!string.IsNullOrEmpty(_state.State.Id))
+        {
+            return;
+        }
+
         var now = DateTime.UtcNow;
 
         _state.State = new SessionState
@@ -54,8 +60,25 @@ public class SessionGrain : Grain, ISessionGrain
     {
         _state.State.PageViewCount++;
 
-        if (_state.State.PageViewCount > 1)
+        // If this is the second page view, session is no longer a bounce
+        if (_state.State.PageViewCount == 2 && _state.State.IsBounce)
+        {
             _state.State.IsBounce = false;
+
+            // If we already counted this as a bounce (session_end arrived before this pageview),
+            // we need to decrement the bounce count to correct the metrics
+            if (!string.IsNullOrEmpty(_state.State.BounceCountedInHour))
+            {
+                var bounceMetricsGrain = _grainFactory.GetGrain<IHourlyMetricsGrain>(
+                    _state.State.BounceCountedInHour);
+                await bounceMetricsGrain.DecrementBouncesAsync();
+                _state.State.BounceCountedInHour = null;
+            }
+        }
+        else if (_state.State.PageViewCount > 1)
+        {
+            _state.State.IsBounce = false;
+        }
 
         await _state.WriteStateAsync();
 
@@ -78,6 +101,10 @@ public class SessionGrain : Grain, ISessionGrain
 
     public async Task EndAsync(string? exitPage)
     {
+        // Track if this is the first time EndAsync is being called
+        var isFirstEnd = !_state.State.EndedAt.HasValue;
+        var previousDuration = _state.State.DurationSeconds;
+
         var now = DateTime.UtcNow;
         _state.State.EndedAt = now;
         _state.State.ExitPage = exitPage;
@@ -85,14 +112,22 @@ public class SessionGrain : Grain, ISessionGrain
 
         await _state.WriteStateAsync();
 
-        // Update hourly metrics
-        var metricsGrain = _grainFactory.GetGrain<IHourlyMetricsGrain>(
-            $"metrics-hourly-{_state.State.ApplicationId}-{now:yyyyMMddHH}");
+        // Only update metrics on first end (idempotent)
+        if (isFirstEnd)
+        {
+            var hourKey = $"metrics-hourly-{_state.State.ApplicationId}-{now:yyyyMMddHH}";
+            var metricsGrain = _grainFactory.GetGrain<IHourlyMetricsGrain>(hourKey);
 
-        if (_state.State.IsBounce)
-            await metricsGrain.IncrementBouncesAsync();
+            if (_state.State.IsBounce)
+            {
+                await metricsGrain.IncrementBouncesAsync();
+                // Track which hour we counted the bounce in, so we can decrement later if needed
+                _state.State.BounceCountedInHour = hourKey;
+                await _state.WriteStateAsync();
+            }
 
-        await metricsGrain.AddDurationAsync(_state.State.DurationSeconds);
+            await metricsGrain.AddDurationAsync(_state.State.DurationSeconds);
+        }
     }
 
     public Task<SessionInfo> GetInfoAsync()

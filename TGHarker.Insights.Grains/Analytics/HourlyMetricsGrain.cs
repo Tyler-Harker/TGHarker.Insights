@@ -202,6 +202,13 @@ public class HourlyMetricsGrain : Grain, IHourlyMetricsGrain
         return Task.CompletedTask;
     }
 
+    public Task DecrementBouncesAsync()
+    {
+        _bufferedBounces--;
+        _isDirty = true;
+        return Task.CompletedTask;
+    }
+
     public Task AddDurationAsync(int seconds)
     {
         _bufferedDuration += seconds;
