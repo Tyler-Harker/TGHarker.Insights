@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Orleans;
 using TGHarker.Insights.Abstractions.DTOs;
 using TGHarker.Insights.Abstractions.Grains;
@@ -22,6 +23,147 @@ public static class AnalyticsEndpoints
         group.MapGet("/events", HandleEvents);
         group.MapGet("/conversions", HandleConversions);
         group.MapGet("/retention", HandleRetention);
+        group.MapGet("/stream", HandleStream);
+    }
+
+    private static async Task HandleStream(
+        string applicationId,
+        string? range,
+        HttpContext context,
+        IClusterClient client)
+    {
+        if (!await ValidateApplicationAccess(applicationId, context, client))
+        {
+            context.Response.StatusCode = 403;
+            return;
+        }
+
+        context.Response.Headers.Append("Content-Type", "text/event-stream");
+        context.Response.Headers.Append("Cache-Control", "no-cache");
+        context.Response.Headers.Append("Connection", "keep-alive");
+
+        var writer = context.Response.BodyWriter;
+        var cancellationToken = context.RequestAborted;
+
+        var to = DateTime.UtcNow;
+        var from = range switch
+        {
+            "7d" => DateTime.UtcNow.Date.AddDays(-7),
+            "24h" => DateTime.UtcNow.AddHours(-24),
+            _ => DateTime.UtcNow.Date.AddDays(-30)
+        };
+        var isHourlyChart = range == "24h";
+
+        try
+        {
+            // 1. Stream metrics first (fastest)
+            var hourlyGrainKeys = new List<string>();
+            var current = from;
+            while (current <= to)
+            {
+                hourlyGrainKeys.Add($"metrics-hourly-{applicationId}-{current:yyyyMMddHH}");
+                current = current.AddHours(1);
+            }
+
+            var metricsTasks = hourlyGrainKeys.Select(key =>
+                client.GetGrain<IHourlyMetricsGrain>(key).GetMetricsAsync());
+            var metrics = (await Task.WhenAll(metricsTasks)).ToList();
+
+            var totalSessions = metrics.Sum(m => m.Sessions);
+            var metricsData = new
+            {
+                pageViews = metrics.Sum(m => m.PageViews),
+                sessions = totalSessions,
+                uniqueVisitors = metrics.Sum(m => m.UniqueVisitors),
+                bounceRate = totalSessions > 0
+                    ? Math.Round((double)metrics.Sum(m => m.Bounces) / totalSessions * 100, 1)
+                    : 0,
+                avgSessionDuration = totalSessions > 0
+                    ? metrics.Sum(m => m.TotalDurationSeconds) / totalSessions
+                    : 0
+            };
+
+            await WriteSSEEvent(context.Response, "metrics", metricsData, cancellationToken);
+
+            // 2. Stream chart data
+            object chartData;
+            if (isHourlyChart)
+            {
+                var hourlyMetrics = metrics.OrderBy(m => m.HourStart).ToList();
+                chartData = new
+                {
+                    isHourly = true,
+                    timestamps = hourlyMetrics.Select(m => m.HourStart.ToString("o")).ToList(),
+                    labels = hourlyMetrics.Select(m => m.HourStart.ToString("h tt")).ToList(),
+                    data = hourlyMetrics.Select(m => m.PageViews).ToList()
+                };
+            }
+            else
+            {
+                var dailyMetrics = metrics
+                    .GroupBy(m => m.HourStart.Date)
+                    .OrderBy(g => g.Key)
+                    .Select(g => new { Date = g.Key, PageViews = g.Sum(m => m.PageViews) })
+                    .ToList();
+
+                chartData = new
+                {
+                    isHourly = false,
+                    labels = dailyMetrics.Select(d => d.Date.ToString("MMM d")).ToList(),
+                    data = dailyMetrics.Select(d => d.PageViews).ToList()
+                };
+            }
+
+            await WriteSSEEvent(context.Response, "chart", chartData, cancellationToken);
+
+            // 3. Stream top pages
+            var pageViewGrains = await client.Search<IPageViewGrain>()
+                .Where(pv => pv.ApplicationId == applicationId && pv.Timestamp >= from && pv.Timestamp <= to)
+                .ToListAsync();
+
+            var pageViewInfoTasks = pageViewGrains.Select(g => g.GetInfoAsync());
+            var pageViewInfos = await Task.WhenAll(pageViewInfoTasks);
+
+            var topPages = pageViewInfos
+                .GroupBy(pv => pv.PagePath)
+                .Select(g => new { path = g.Key, views = g.Count() })
+                .OrderByDescending(p => p.views)
+                .Take(10)
+                .ToList();
+
+            await WriteSSEEvent(context.Response, "topPages", topPages, cancellationToken);
+
+            // 4. Stream traffic sources
+            var sessionGrains = await client.Search<ISessionGrain>()
+                .Where(s => s.ApplicationId == applicationId && s.StartedAt >= from && s.StartedAt <= to)
+                .ToListAsync();
+
+            var sessionInfoTasks = sessionGrains.Select(g => g.GetInfoAsync());
+            var sessionInfos = await Task.WhenAll(sessionInfoTasks);
+
+            var sources = sessionInfos
+                .GroupBy(s => s.Source.ToString())
+                .OrderByDescending(g => g.Count())
+                .Select(g => new { source = g.Key, count = g.Count() })
+                .ToList();
+
+            await WriteSSEEvent(context.Response, "sources", sources, cancellationToken);
+
+            // 5. Signal completion
+            await WriteSSEEvent(context.Response, "complete", new { }, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Client disconnected
+        }
+    }
+
+    private static async Task WriteSSEEvent(HttpResponse response, string eventName, object data, CancellationToken cancellationToken)
+    {
+        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var message = $"event: {eventName}\ndata: {json}\n\n";
+        await response.WriteAsync(message, cancellationToken);
+        await response.Body.FlushAsync(cancellationToken);
     }
 
     private static async Task<IResult> HandleOverview(
