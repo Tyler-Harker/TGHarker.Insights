@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using TGHarker.Insights.Web.Endpoints;
 using TGHarker.Insights.Web.Services;
@@ -9,6 +10,7 @@ using TGHarker.Orleans.Search.Orleans.Extensions;
 using TGHarker.Orleans.Search.PostgreSQL.Extensions;
 using Orleans.Configuration;
 using Azure.Data.Tables;
+using Azure.Storage.Blobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +49,20 @@ else
 // Orleans Search
 builder.Services.AddOrleansSearch()
     .UsePostgreSql(builder.Configuration.GetConnectionString("searchdb-insights")!);
+
+// Data Protection - persist keys to Azure Blob Storage so sessions survive deployments
+var dataProtectionConnectionString = builder.Configuration.GetConnectionString("AzureStorage");
+if (!string.IsNullOrEmpty(dataProtectionConnectionString))
+{
+    var blobServiceClient = new BlobServiceClient(dataProtectionConnectionString);
+    var containerClient = blobServiceClient.GetBlobContainerClient("dataprotection");
+    containerClient.CreateIfNotExists();
+    var blobClient = containerClient.GetBlobClient("keys.xml");
+
+    builder.Services.AddDataProtection()
+        .SetApplicationName("TGHarker.Insights")
+        .PersistKeysToAzureBlobStorage(blobClient);
+}
 
 // Authentication with Identity.Harker.Dev
 builder.Services.AddAuthentication(options =>
