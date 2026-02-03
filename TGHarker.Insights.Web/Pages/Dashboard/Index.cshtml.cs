@@ -29,7 +29,7 @@ public class IndexModel : PageModel
     public List<int> ChartData { get; set; } = [];
 
     [BindProperty(SupportsGet = true)]
-    public string Range { get; set; } = "30d";
+    public string Range { get; set; } = "today";
 
     public async Task OnGetAsync()
     {

@@ -90,4 +90,10 @@ public sealed class SessionState
     /// Used to decrement bounces when session becomes non-bounce.
     /// </summary>
     [Id(20)] public string? BounceCountedInHour { get; set; }
+
+    /// <summary>
+    /// Tracks how much duration (in seconds) has already been added to hourly metrics.
+    /// Used to calculate delta when session_end is called multiple times.
+    /// </summary>
+    [Id(21)] public int DurationAddedToMetrics { get; set; }
 }

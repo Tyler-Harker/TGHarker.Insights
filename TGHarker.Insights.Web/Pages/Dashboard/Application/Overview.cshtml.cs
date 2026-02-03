@@ -31,7 +31,7 @@ public class OverviewModel : DashboardPageModel
     public string? FilterValue { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string Range { get; set; } = "30d";
+    public string Range { get; set; } = "today";
 
     public async Task<IActionResult> OnGetAsync()
     {

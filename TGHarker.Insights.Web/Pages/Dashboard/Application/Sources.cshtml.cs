@@ -18,7 +18,7 @@ public class SourcesModel : DashboardPageModel
     public List<ReferrerStat> ReferrerStats { get; set; } = [];
 
     [BindProperty(SupportsGet = true)]
-    public string Range { get; set; } = "30d";
+    public string Range { get; set; } = "today";
 
     public async Task<IActionResult> OnGetAsync()
     {

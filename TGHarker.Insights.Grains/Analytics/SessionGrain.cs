@@ -103,31 +103,34 @@ public class SessionGrain : Grain, ISessionGrain
     {
         // Track if this is the first time EndAsync is being called
         var isFirstEnd = !_state.State.EndedAt.HasValue;
-        var previousDuration = _state.State.DurationSeconds;
 
         var now = DateTime.UtcNow;
         _state.State.EndedAt = now;
         _state.State.ExitPage = exitPage;
         _state.State.DurationSeconds = (int)(now - _state.State.StartedAt).TotalSeconds;
 
-        await _state.WriteStateAsync();
+        // Calculate how much new duration to add (delta from what we've already added)
+        var durationDelta = _state.State.DurationSeconds - _state.State.DurationAddedToMetrics;
 
-        // Only update metrics on first end (idempotent)
-        if (isFirstEnd)
+        var hourKey = $"metrics-hourly-{_state.State.ApplicationId}-{now:yyyyMMddHH}";
+        var metricsGrain = _grainFactory.GetGrain<IHourlyMetricsGrain>(hourKey);
+
+        // Only count bounces on first end (idempotent)
+        if (isFirstEnd && _state.State.IsBounce)
         {
-            var hourKey = $"metrics-hourly-{_state.State.ApplicationId}-{now:yyyyMMddHH}";
-            var metricsGrain = _grainFactory.GetGrain<IHourlyMetricsGrain>(hourKey);
-
-            if (_state.State.IsBounce)
-            {
-                await metricsGrain.IncrementBouncesAsync();
-                // Track which hour we counted the bounce in, so we can decrement later if needed
-                _state.State.BounceCountedInHour = hourKey;
-                await _state.WriteStateAsync();
-            }
-
-            await metricsGrain.AddDurationAsync(_state.State.DurationSeconds);
+            await metricsGrain.IncrementBouncesAsync();
+            // Track which hour we counted the bounce in, so we can decrement later if needed
+            _state.State.BounceCountedInHour = hourKey;
         }
+
+        // Add duration delta if there's any new time to add
+        if (durationDelta > 0)
+        {
+            await metricsGrain.AddDurationAsync(durationDelta);
+            _state.State.DurationAddedToMetrics = _state.State.DurationSeconds;
+        }
+
+        await _state.WriteStateAsync();
     }
 
     public Task<SessionInfo> GetInfoAsync()
