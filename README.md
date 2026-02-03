@@ -9,14 +9,16 @@ A privacy-focused, self-hosted web analytics platform built on Microsoft Orleans
 - **Page Analytics**: Views, unique visitors, time on page, bounce rates
 - **Traffic Sources**: Referrer tracking, UTM parameters, source categorization
 - **Custom Events**: Track any user interaction with category, action, label, value
-- **Conversion Goals**: Page visit and event-based goal tracking
+- **Conversion Goals**: Page visit, event, duration, and pages-per-session goal tracking
 - **Funnel Analysis**: Multi-step user journey tracking with drop-off analysis
+- **Retention Analysis**: Weekly cohort-based retention tracking
 - **User Attributes**: Custom visitor segmentation and filtering
+- **Theme Support**: Light and dark mode with user preference persistence
 - **Privacy-First**: No third-party data sharing, anonymous visitor IDs
 
 ## Architecture
 
-Built on Microsoft Orleans for distributed, horizontally scalable analytics processing:
+Built on Microsoft Orleans 10.0 for distributed, horizontally scalable analytics processing:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -45,6 +47,10 @@ Built on Microsoft Orleans for distributed, horizontally scalable analytics proc
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
 │  │   Funnel    │  │   Funnel    │  │     Application         │  │
 │  │   Grains    │  │  Analytics  │  │       Grains            │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
+│  │  Retention  │  │   Daily     │  │     Conversion          │  │
+│  │   Cohort    │  │   Metrics   │  │       Grains            │  │
 │  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -141,7 +147,10 @@ Traffic source analysis: direct, referral, search, social, with UTM campaign tra
 Custom event tracking with category breakdown and action analysis.
 
 ### Conversions
-Goal tracking for page visits and custom events with conversion rate analysis.
+Goal tracking for page visits, custom events, session duration, and pages per session with conversion rate analysis.
+
+### Retention
+Weekly cohort-based retention analysis showing how users return over time.
 
 ### Funnels
 Multi-step user journey tracking:
@@ -154,6 +163,7 @@ Multi-step user journey tracking:
 - Application configuration
 - Tracking code generation
 - User attribute management (enable/disable filtering)
+- Allowed origins configuration for CORS
 - Danger zone for application deletion
 
 ## Scalability
@@ -188,6 +198,20 @@ TGHarker.Insights/
 ```
 
 ## Configuration
+
+### Authentication
+
+The dashboard uses OpenID Connect for authentication. Configure your identity provider in `appsettings.json`:
+
+```json
+{
+  "Authentication": {
+    "Authority": "https://your-identity-provider",
+    "ClientId": "your-client-id",
+    "ClientSecret": "your-client-secret"
+  }
+}
+```
 
 ### Environment Variables
 
@@ -232,6 +256,29 @@ Batch event collection.
 #### GET /api/collect/config/{applicationId}
 Get SDK configuration for an application.
 
+### Analytics Endpoints
+
+#### GET /api/applications/{applicationId}/analytics/overview
+Get summary metrics (page views, sessions, bounce rate, duration).
+
+#### GET /api/applications/{applicationId}/analytics/realtime
+Get current active visitors and page distribution.
+
+#### GET /api/applications/{applicationId}/analytics/pages
+Get top pages by view count.
+
+#### GET /api/applications/{applicationId}/analytics/sources
+Get traffic source breakdown.
+
+#### GET /api/applications/{applicationId}/analytics/events
+Get custom events grouped by category/action.
+
+#### GET /api/applications/{applicationId}/analytics/conversions
+Get conversions grouped by goal.
+
+#### GET /api/applications/{applicationId}/analytics/retention
+Get retention cohorts with week-by-week breakdown.
+
 ## Contributing
 
 1. Fork the repository
@@ -243,6 +290,17 @@ Get SDK configuration for an application.
 ## License
 
 MIT License - see LICENSE file for details.
+
+## Technology Stack
+
+- **.NET 10** - Runtime and framework
+- **Microsoft Orleans 10.0** - Distributed actor framework
+- **TGHarker.Orleans.Search** - Queryable grain state
+- **PostgreSQL** - Search index storage
+- **Azure Tables** - Grain state persistence
+- **.NET Aspire** - Development orchestration
+- **Bootstrap 5** - UI framework
+- **Chart.js** - Charting library
 
 ## Acknowledgments
 

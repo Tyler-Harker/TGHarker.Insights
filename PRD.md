@@ -44,6 +44,8 @@ To provide a powerful, scalable, and privacy-respecting alternative to commercia
 ### 5. Conversion Goals
 - **Page Visit Goals**: Track when users reach specific pages
 - **Event Goals**: Track custom interactions
+- **Duration Goals**: Track sessions exceeding target duration
+- **Pages Per Session Goals**: Track sessions with target page count
 - Goal conversion rate calculation
 - Per-goal analytics with trend data
 
@@ -69,12 +71,25 @@ To provide a powerful, scalable, and privacy-respecting alternative to commercia
 - History API integration for SPA navigation
 - Methods: `init()`, `pageview()`, `event()`, `identify()`, `setUserAttributes()`
 
+### 9. Retention Analysis
+- Weekly cohort-based retention tracking
+- Week-by-week retention percentages
+- Configurable cohort depth (default 8 weeks)
+- Visual retention matrix display
+
+### 10. Theme Support
+- Light and dark mode support
+- User preference persistence
+- System theme detection
+
 ## Technical Architecture
 
 ### Backend Stack
 - **Framework**: ASP.NET Core 10 with Razor Pages
-- **Distributed Computing**: Microsoft Orleans (Actor Model)
-- **Search/Query**: Orleans Search with queryable grain state
+- **Distributed Computing**: Microsoft Orleans 10.0 (Actor Model)
+- **Search/Query**: TGHarker.Orleans.Search with queryable grain state
+- **Data Storage**: PostgreSQL (via Orleans Search), Azure Tables
+- **Authentication**: OpenID Connect
 - **Hosting**: .NET Aspire for local development and orchestration
 
 ### Scalability Design
@@ -82,16 +97,22 @@ To provide a powerful, scalable, and privacy-respecting alternative to commercia
 #### Grain Architecture
 | Grain Type | Key Format | Purpose |
 |------------|-----------|---------|
-| ApplicationGrain | `app-{id}` | Application settings, API keys |
+| ApplicationGrain | `app-{id}` | Application settings, API keys, allowed origins |
 | VisitorGrain | `visitor-{appId}-{visitorId}` | Visitor state, attributes |
 | SessionGrain | `session-{appId}-{sessionId}` | Session data, page views, events |
 | PageViewGrain | `pv-{appId}-{id}` | Individual page view records |
 | EventGrain | `event-{appId}-{id}` | Individual event records |
+| ConversionGrain | `conversion-{appId}-{id}` | Individual conversion records |
+| GoalGrain | `goal-{appId}-{goalId}` | Goal definitions |
 | HourlyMetricsGrain | `metrics-hourly-{appId}-{yyyyMMddHH}` | Aggregated hourly metrics |
+| DailyMetricsGrain | `metrics-daily-{appId}-{yyyyMMdd}` | Aggregated daily metrics |
 | RealTimeShardGrain | `realtime-shard-{appId}-{0-15}` | Sharded real-time tracking |
-| RealTimeCoordinatorGrain | `realtime-{appId}` | Aggregates shard data |
+| RealTimeCoordinatorGrain | `realtime-coordinator-{appId}` | Aggregates shard data |
+| RealTimeGrain | `realtime-{appId}` | Real-time coordinator |
 | FunnelGrain | `funnel-{appId}-{id}` | Funnel definitions |
 | FunnelAnalyticsGrain | `funnel-analytics-{funnelId}-{yyyyMMdd}` | Daily funnel metrics |
+| FunnelSummaryGrain | `funnel-summary-{funnelId}` | Aggregated funnel analytics |
+| RetentionCohortGrain | `cohort-{appId}-{cohortWeek}` | Weekly retention cohorts |
 
 #### Scalability Features
 - **Sharded Real-Time Tracking**: 16 shards per application to distribute load
@@ -141,12 +162,14 @@ To provide a powerful, scalable, and privacy-respecting alternative to commercia
 | Events | `/dashboard/{appId}/events` | Custom event tracking |
 | Conversions | `/dashboard/{appId}/conversions` | Goal tracking |
 | Funnels | `/dashboard/{appId}/funnels` | Funnel analysis |
-| Settings | `/dashboard/{appId}/settings` | App config, tracking code, attributes |
+| Settings | `/dashboard/{appId}/settings` | App config, tracking code, attributes, allowed origins |
 
 ## Security
 
 - API key authentication for data collection
-- User-based access control for dashboard
+- OpenID Connect authentication for dashboard
+- Organization-based multi-tenancy
+- Per-application CORS origin allowlists
 - CSRF protection on forms
 - No personally identifiable information stored by default
 - Visitor IDs are anonymous, randomly generated client-side
@@ -164,7 +187,7 @@ To provide a powerful, scalable, and privacy-respecting alternative to commercia
 - [ ] A/B testing integration
 - [ ] Heatmaps and session recordings
 - [ ] Advanced segmentation
-- [ ] Cohort analysis
+- [x] Cohort analysis (retention cohorts implemented)
 - [ ] Predictive analytics
 
 ### Phase 4
@@ -184,8 +207,11 @@ To provide a powerful, scalable, and privacy-respecting alternative to commercia
 ## Dependencies
 
 - .NET 10
-- Microsoft Orleans 8.x
-- Orleans Search (custom library)
+- Microsoft Orleans 10.0
+- TGHarker.Orleans.Search 1.0.11
+- TGHarker.Orleans.Search.PostgreSQL 1.0.11
+- Aspire.Azure.Data.Tables 13.1.0
+- Aspire.Npgsql.EntityFrameworkCore.PostgreSQL 13.1.0
 - Bootstrap 5
 - Chart.js
 
