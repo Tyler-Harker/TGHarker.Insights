@@ -111,15 +111,27 @@ public class OverviewModel : DashboardPageModel
                 : 0
         };
 
-        // Chart data - daily aggregation
-        var dailyMetrics = metrics
-            .GroupBy(m => m.HourStart.Date)
-            .OrderBy(g => g.Key)
-            .Select(g => new { Date = g.Key, PageViews = g.Sum(m => m.PageViews) })
-            .ToList();
+        // Chart data - hourly for "today", daily for other ranges
+        if (Range == "today")
+        {
+            var hourlyMetrics = metrics
+                .OrderBy(m => m.HourStart)
+                .ToList();
 
-        ChartLabels = dailyMetrics.Select(d => d.Date.ToString("MMM d")).ToList();
-        ChartData = dailyMetrics.Select(d => d.PageViews).ToList();
+            ChartLabels = hourlyMetrics.Select(m => m.HourStart.ToString("h tt")).ToList();
+            ChartData = hourlyMetrics.Select(m => m.PageViews).ToList();
+        }
+        else
+        {
+            var dailyMetrics = metrics
+                .GroupBy(m => m.HourStart.Date)
+                .OrderBy(g => g.Key)
+                .Select(g => new { Date = g.Key, PageViews = g.Sum(m => m.PageViews) })
+                .ToList();
+
+            ChartLabels = dailyMetrics.Select(d => d.Date.ToString("MMM d")).ToList();
+            ChartData = dailyMetrics.Select(d => d.PageViews).ToList();
+        }
 
         // Top pages - fetch all page view info in parallel
         var pageViewGrains = await Client.Search<IPageViewGrain>()

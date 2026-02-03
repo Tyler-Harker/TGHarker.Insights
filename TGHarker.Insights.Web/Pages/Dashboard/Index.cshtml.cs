@@ -126,15 +126,29 @@ public class IndexModel : PageModel
             })
             .ToList();
 
-        // Chart data - daily aggregation across all apps
-        var dailyMetrics = allMetrics
-            .GroupBy(m => m.HourStart.Date)
-            .OrderBy(g => g.Key)
-            .Select(g => new { Date = g.Key, PageViews = g.Sum(m => m.PageViews) })
-            .ToList();
+        // Chart data - hourly for "today", daily for other ranges
+        if (Range == "today")
+        {
+            var hourlyMetrics = allMetrics
+                .GroupBy(m => m.HourStart)
+                .OrderBy(g => g.Key)
+                .Select(g => new { Hour = g.Key, PageViews = g.Sum(m => m.PageViews) })
+                .ToList();
 
-        ChartLabels = dailyMetrics.Select(d => d.Date.ToString("MMM d")).ToList();
-        ChartData = dailyMetrics.Select(d => d.PageViews).ToList();
+            ChartLabels = hourlyMetrics.Select(h => h.Hour.ToString("h tt")).ToList();
+            ChartData = hourlyMetrics.Select(h => h.PageViews).ToList();
+        }
+        else
+        {
+            var dailyMetrics = allMetrics
+                .GroupBy(m => m.HourStart.Date)
+                .OrderBy(g => g.Key)
+                .Select(g => new { Date = g.Key, PageViews = g.Sum(m => m.PageViews) })
+                .ToList();
+
+            ChartLabels = dailyMetrics.Select(d => d.Date.ToString("MMM d")).ToList();
+            ChartData = dailyMetrics.Select(d => d.PageViews).ToList();
+        }
     }
 
     private string? GetOrganizationId()
