@@ -15,7 +15,8 @@ public record SessionInfo(
     [property: Id(7)] int DurationSeconds,
     [property: Id(8)] TrafficSource Source,
     [property: Id(9)] bool IsBounce,
-    [property: Id(10)] bool HasConversion
+    [property: Id(10)] bool HasConversion,
+    [property: Id(11)] string? ReferrerDomain
 );
 
 [GenerateSerializer]

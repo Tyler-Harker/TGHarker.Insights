@@ -58,9 +58,19 @@ public class SourcesModel : DashboardPageModel
             .OrderByDescending(s => s.Sessions)
             .ToList();
 
-        // Note: Referrer data would need to be tracked separately
-        // For now, showing source breakdown only
-        ReferrerStats = [];
+        // Referrer stats - group by referrer domain
+        ReferrerStats = sessionInfos
+            .Where(s => !string.IsNullOrEmpty(s.ReferrerDomain))
+            .GroupBy(s => s.ReferrerDomain!)
+            .Select(g => new ReferrerStat
+            {
+                Referrer = g.Key,
+                Sessions = g.Count(),
+                BounceRate = g.Count() > 0 ? (double)g.Count(s => s.IsBounce) / g.Count() * 100 : 0
+            })
+            .OrderByDescending(r => r.Sessions)
+            .Take(10)
+            .ToList();
 
         return Page();
     }

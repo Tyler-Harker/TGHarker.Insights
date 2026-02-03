@@ -147,7 +147,8 @@ public class SessionGrain : Grain, ISessionGrain
             state.DurationSeconds,
             state.Source,
             state.IsBounce,
-            state.HasConversion
+            state.HasConversion,
+            state.ReferrerDomain
         ));
     }
 
